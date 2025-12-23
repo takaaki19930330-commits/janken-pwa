@@ -1,42 +1,163 @@
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-}
-
+/* 全体 */
 .container {
+  max-width: 900px;
+  margin: 20px auto;
   padding: 16px;
+  font-family: "Helvetica Neue", Arial, sans-serif;
+  color: #222;
 }
 
-h1 {
-  text-align: center;
+/* タイトル */
+.title {
+  margin: 0 0 12px 0;
+  font-size: 1.6rem;
 }
 
-.buttons {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+/* タブ */
+.tabbar {
+  display: flex;
   gap: 8px;
   margin-bottom: 12px;
 }
-
-button {
-  font-size: 18px;
-  padding: 12px;
+.tab {
+  background: #f5f7fb;
+  border: 1px solid #e3e8f0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.tab.active {
+  background: linear-gradient(90deg,#fff,#f0f7ff);
+  box-shadow: 0 4px 10px rgba(16,24,40,0.06);
 }
 
-.undo {
-  width: 100%;
+/* 日付行 */
+.date-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 12px;
-  background: #eee;
+}
+.date-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.date-input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #dfe7f6;
+  font-size: 16px;
+  touch-action: manipulation; /* タッチ反応改善 */
 }
 
-table {
+/* 平均バッジ */
+.avg-badge {
+  display:flex;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  border: 1px solid #eef3ff;
+  padding: 8px 12px;
+  border-radius: 12px;
+}
+.avg-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+/* じゃんけんボタンのグリッド */
+.buttons-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.janken-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 18px; /* タップ領域を大きく */
+  border-radius: 14px;
+  background: #fff;
+  border: 2px solid #ddd;
+  box-shadow: 0 6px 14px rgba(16,24,40,0.06);
+  cursor: pointer;
+  font-weight: 700;
+  transition: transform .08s ease, box-shadow .12s ease;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.janken-btn:active {
+  transform: translateY(2px) scale(.995);
+  box-shadow: 0 3px 8px rgba(16,24,40,0.06);
+}
+.janken-emoji {
+  font-size: 1.8rem;
+}
+.janken-text {
+  font-size: 0.95rem;
+}
+
+/* アクション行 */
+.action-row {
+  margin-bottom: 14px;
+}
+.undo {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #e6eef9;
+  cursor: pointer;
+}
+
+/* テーブル */
+.table-wrapper {
+  overflow-x: auto;
+  margin-top: 8px;
+}
+.records-table {
   width: 100%;
   border-collapse: collapse;
 }
+.records-table th, .records-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f2f6ff;
+  text-align: left;
+}
 
-th,
-td {
-  border: 1px solid #ccc;
-  padding: 6px;
-  text-align: center;
+/* 統計 */
+.stats-container {
+  margin-top: 8px;
+}
+.stats-summary {
+  display:flex;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.stats-label { font-size: 0.85rem; color: #666; }
+.stats-value { font-size: 1.3rem; font-weight:700; color: #111; }
+
+/* グラフカード */
+.chart-card {
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px;
+  box-shadow: 0 6px 14px rgba(16,24,40,0.04);
+  margin-bottom: 12px;
+}
+
+/* レスポンシブ（スマホ） */
+@media (max-width: 480px) {
+  .container { padding: 10px; margin: 10px; }
+  .buttons-grid { gap: 8px; grid-template-columns: repeat(3, 1fr); }
+  .janken-btn { padding: 16px; border-radius: 12px; }
+  .date-input { font-size: 14px; padding: 8px; }
+  .janken-emoji { font-size: 1.6rem; }
 }
