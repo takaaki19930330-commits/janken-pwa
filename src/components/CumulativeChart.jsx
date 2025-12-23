@@ -1,15 +1,11 @@
 import React from "react";
 
-/**
- * data: [{ date, cumulativeAvg }]
- * options: perItemWidth, height, expectedBaseline (number)
- */
 export default function CumulativeChart({
   data,
   perItemWidth = 96,
   height = 240,
   padding = 36,
-  expectedBaseline = (40 + 20 + 10) / 3, // ≒23.333...
+  expectedBaseline = (40 + 20 + 10) / 3,
 }) {
   if (!data || data.length === 0) {
     return <div style={{ padding: 20 }}>データがありません</div>;
@@ -23,7 +19,6 @@ export default function CumulativeChart({
   const innerW = width - padding * 2;
   const innerH = height - padding * 2;
 
-  // compute points
   const points = data.map((d, i) => {
     const x = padding + (i / (data.length - 1 || 1)) * innerW;
     const y = padding + (1 - (d.cumulativeAvg - min) / (max - min || 1)) * innerH;
@@ -32,11 +27,10 @@ export default function CumulativeChart({
 
   const pathD = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
-  // expected baseline Y
   const baselineY = padding + (1 - (expectedBaseline - min) / (max - min || 1)) * innerH;
 
-  // prepare bar height for expected value (visual)
-  const barMaxHeight = innerH; // full height maps to max value
+  // bars definition (but we will draw them AFTER the area so they appear on top)
+  const barMaxHeight = innerH;
   const bars = data.map((d, i) => {
     const xCenter = padding + (i / (data.length - 1 || 1)) * innerW;
     const barWidth = Math.max(12, perItemWidth * 0.5);
@@ -55,25 +49,7 @@ export default function CumulativeChart({
           </linearGradient>
         </defs>
 
-        {/* expected baseline bar (drawn per day) */}
-        {bars.map((b, idx) => {
-          const dayAvg = data[idx].cumulativeAvg;
-          const above = dayAvg >= expectedBaseline;
-          return (
-            <rect
-              key={"bar" + idx}
-              x={b.x}
-              y={b.y}
-              width={b.w}
-              height={b.h}
-              fill={above ? "#d1fae5" : "#fee2e2"} /* light green / light red */
-              stroke={above ? "#16a34a22" : "#ef444422"}
-              rx={6}
-            />
-          );
-        })}
-
-        {/* shaded area under line */}
+        {/* shaded area under line (draw first so bars appear on top) */}
         <path
           d={`${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`}
           fill="url(#lineGrad)"
@@ -84,10 +60,28 @@ export default function CumulativeChart({
         {/* line */}
         <path d={pathD} fill="none" stroke="#2563eb" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
 
-        {/* baseline line */}
+        {/* expected baseline line */}
         <line x1={padding} x2={width - padding} y1={baselineY} y2={baselineY} stroke="#999" strokeDasharray="4 6" strokeWidth="1" />
 
-        {/* points, values, date labels */}
+        {/* bars: draw AFTER shaded area so they are visible on top */}
+        {bars.map((b, idx) => {
+          const dayAvg = data[idx].cumulativeAvg;
+          const above = dayAvg >= expectedBaseline;
+          return (
+            <rect
+              key={"bar" + idx}
+              x={b.x}
+              y={b.y}
+              width={b.w}
+              height={b.h}
+              fill={above ? "#d1fae5" : "#fee2e2"}
+              stroke={above ? "#16a34a22" : "#ef444422"}
+              rx={6}
+            />
+          );
+        })}
+
+        {/* points and labels (on top) */}
         {points.map((p, idx) => (
           <g key={idx}>
             <circle cx={p.x} cy={p.y} r={3.8} fill="#fff" stroke="#2563eb" strokeWidth="1.6" />
