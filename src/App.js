@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import "./App.css";
 import { loadRecords, saveRecords } from "./db";
 import Stats from "./components/Stats";
+import StylishInput from "./components/StylishInput";
 
 console.log("APP VERSION 2025-12-23 14:45");
 
@@ -49,7 +50,6 @@ export default function App() {
     setRecords(prev);
   }
 
-  // 平均得点（全期間）
   const averageScore = useMemo(() => {
     if (records.length === 0) return 0;
     const sum = records.reduce((acc, r) => acc + (SCORE_MAP[r.result] || 0), 0);
@@ -95,19 +95,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="buttons-grid">
-            <JankenButton label="✊" text="勝ち" color="#3cb371" onClick={()=>addRecord("勝ち","✊")} />
-            <JankenButton label="✊" text="あいこ" color="#f0ad4e" onClick={()=>addRecord("あいこ","✊")} />
-            <JankenButton label="✊" text="負け" color="#d9534f" onClick={()=>addRecord("負け","✊")} />
-
-            <JankenButton label="✌️" text="勝ち" color="#3cb371" onClick={()=>addRecord("勝ち","✌️")} />
-            <JankenButton label="✌️" text="あいこ" color="#f0ad4e" onClick={()=>addRecord("あいこ","✌️")} />
-            <JankenButton label="✌️" text="負け" color="#d9534f" onClick={()=>addRecord("負け","✌️")} />
-
-            <JankenButton label="✋" text="勝ち" color="#3cb371" onClick={()=>addRecord("勝ち","✋")} />
-            <JankenButton label="✋" text="あいこ" color="#f0ad4e" onClick={()=>addRecord("あいこ","✋")} />
-            <JankenButton label="✋" text="負け" color="#d9534f" onClick={()=>addRecord("負け","✋")} />
-          </div>
+          <StylishInput onAdd={addRecord} />
 
           <div className="action-row">
             <button className="undo" onClick={undo}>
@@ -142,19 +130,5 @@ export default function App() {
         <Stats records={records} scoreMap={SCORE_MAP} />
       )}
     </div>
-  );
-}
-
-function JankenButton({ label, text, color, onClick }) {
-  return (
-    <button
-      className="janken-btn"
-      onClick={onClick}
-      style={{ borderColor: color }}
-      aria-label={`${label} ${text}`}
-    >
-      <div className="janken-emoji">{label}</div>
-      <div className="janken-text">{text}</div>
-    </button>
   );
 }
