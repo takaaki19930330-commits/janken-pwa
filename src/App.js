@@ -1,149 +1,80 @@
-import { useState, useEffect } from "react";
-
-const SCORE_MAP = {
-  win: 40,
-  lose: 10,
-  draw: 20,
-};
+import { useEffect, useState } from "react";
+import "./App.css";
+import { loadRecords, saveRecords } from "./db";
 
 export default function App() {
-  const today = new Date().toISOString().slice(0, 10);
-
   const [records, setRecords] = useState([]);
-  const [date, setDate] = useState(today);
-  const [hand, setHand] = useState("rock");
+  const [history, setHistory] = useState([]);
 
+  // 初回起動時にDBから読み込み
   useEffect(() => {
-    const saved = localStorage.getItem("jankenRecords");
-    if (saved) setRecords(JSON.parse(saved));
+    loadRecords().then(setRecords);
   }, []);
 
+  // recordsが変わるたびに保存
   useEffect(() => {
-    localStorage.setItem("jankenRecords", JSON.stringify(records));
+    saveRecords(records);
   }, [records]);
 
-  const addRecord = (result) => {
+  function addRecord(result, hand) {
+    setHistory([...history, records]); // Undo用に保存
     setRecords([
       ...records,
       {
-        date,
-        hand,
+        date: new Date().toISOString().slice(0, 10),
         result,
-        score: SCORE_MAP[result],
+        hand,
       },
     ]);
-  };
+  }
 
-  const averageScore =
-    records.length === 0
-      ? 0
-      : (
-          records.reduce((sum, r) => sum + r.score, 0) / records.length
-        ).toFixed(1);
+  function undo() {
+    if (history.length === 0) return;
+    const prev = history[history.length - 1];
+    setHistory(history.slice(0, -1));
+    setRecords(prev);
+  }
 
   return (
-    <div style={styles.container}>
-      <h1>✊ じゃんけん記録</h1>
+    <div className="container">
+      <h1>じゃんけん記録</h1>
 
-      {/* 日付入力 */}
-      <div style={styles.block}>
-        <label>
-          日付：
-          <input
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            style={styles.input}
-          />
-        </label>
+      <div className="buttons">
+        <button onClick={() => addRecord("勝ち", "✊")}>✊ 勝ち</button>
+        <button onClick={() => addRecord("負け", "✊")}>✊ 負け</button>
+        <button onClick={() => addRecord("あいこ", "✊")}>✊ あいこ</button>
+
+        <button onClick={() => addRecord("勝ち", "✌️")}>✌️ 勝ち</button>
+        <button onClick={() => addRecord("負け", "✌️")}>✌️ 負け</button>
+        <button onClick={() => addRecord("あいこ", "✌️")}>✌️ あいこ</button>
+
+        <button onClick={() => addRecord("勝ち", "✋")}>✋ 勝ち</button>
+        <button onClick={() => addRecord("負け", "✋")}>✋ 負け</button>
+        <button onClick={() => addRecord("あいこ", "✋")}>✋ あいこ</button>
       </div>
 
-      {/* 手の選択 */}
-      <div style={styles.block}>
-        <label>
-          自分の手：
-          <select
-            value={hand}
-            onChange={(e) => setHand(e.target.value)}
-            style={styles.input}
-          >
-            <option value="rock">グー</option>
-            <option value="scissors">チョキ</option>
-            <option value="paper">パー</option>
-          </select>
-        </label>
-      </div>
+      <button className="undo" onClick={undo}>
+        ↩ 戻る
+      </button>
 
-      {/* 結果ボタン */}
-      <div style={styles.buttons}>
-        <button style={styles.win} onClick={() => addRecord("win")}>
-          勝ち
-        </button>
-        <button style={styles.draw} onClick={() => addRecord("draw")}>
-          あいこ
-        </button>
-        <button style={styles.lose} onClick={() => addRecord("lose")}>
-          負け
-        </button>
-      </div>
-
-      <p>記録数：{records.length}</p>
-      <p>平均獲得点：{averageScore}</p>
-
-      {/* 履歴 */}
-      <ul style={styles.list}>
-        {records
-          .slice()
-          .reverse()
-          .map((r, i) => (
-            <li key={i}>
-              {r.date} ／ {handLabel(r.hand)} ／ {resultLabel(r.result)} ／{" "}
-              {r.score}点
-            </li>
+      <table>
+        <thead>
+          <tr>
+            <th>日付</th>
+            <th>手</th>
+            <th>結果</th>
+          </tr>
+        </thead>
+        <tbody>
+          {records.map((r, i) => (
+            <tr key={i}>
+              <td>{r.date}</td>
+              <td>{r.hand}</td>
+              <td>{r.result}</td>
+            </tr>
           ))}
-      </ul>
+        </tbody>
+      </table>
     </div>
   );
 }
-
-const handLabel = (hand) => {
-  if (hand === "rock") return "グー";
-  if (hand === "scissors") return "チョキ";
-  if (hand === "paper") return "パー";
-};
-
-const resultLabel = (result) => {
-  if (result === "win") return "勝ち";
-  if (result === "draw") return "あいこ";
-  if (result === "lose") return "負け";
-};
-
-const styles = {
-  container: {
-    maxWidth: 420,
-    margin: "0 auto",
-    padding: 16,
-    textAlign: "center",
-    fontSize: 18,
-  },
-  block: {
-    marginBottom: 12,
-  },
-  input: {
-    marginLeft: 8,
-    fontSize: 16,
-  },
-  buttons: {
-    display: "flex",
-    justifyContent: "space-between",
-    marginBottom: 16,
-  },
-  win: { flex: 1, margin: 4, padding: 20, fontSize: 18 },
-  draw: { flex: 1, margin: 4, padding: 20, fontSize: 18 },
-  lose: { flex: 1, margin: 4, padding: 20, fontSize: 18 },
-  list: {
-    textAlign: "left",
-    maxHeight: 300,
-    overflowY: "auto",
-  },
-};
