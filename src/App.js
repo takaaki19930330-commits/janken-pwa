@@ -2,26 +2,34 @@ import { useEffect, useState } from "react";
 import "./App.css";
 import { loadRecords, saveRecords } from "./db";
 
+console.log("APP VERSION 2025-12-23 14:45");
+
 export default function App() {
   const [records, setRecords] = useState([]);
   const [history, setHistory] = useState([]);
+  // 追加: 日付選択状態（YYYY-MM-DD）。デフォルトは今日。
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    return d.toISOString().slice(0, 10);
+  });
 
-  // 初回起動時にDBから読み込み
   useEffect(() => {
     loadRecords().then(setRecords);
   }, []);
 
-  // recordsが変わるたびに保存
   useEffect(() => {
     saveRecords(records);
   }, [records]);
 
   function addRecord(result, hand) {
-    setHistory([...history, records]); // Undo用に保存
+    // history に入れるのは配列のコピー（参照をそのまま入れると undo で副作用が出ることがある）
+    setHistory([...history, records.slice()]);
+
     setRecords([
       ...records,
       {
-        date: new Date().toISOString().slice(0, 10),
+        // selectedDate (YYYY-MM-DD) を使う（既存との後方互換）
+        date: selectedDate,
         result,
         hand,
       },
@@ -38,6 +46,22 @@ export default function App() {
   return (
     <div className="container">
       <h1>じゃんけん記録</h1>
+
+      {/* 日付入力 */}
+      <div style={{ marginBottom: 12 }}>
+        <label>
+          日付：
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            style={{ marginLeft: 8 }}
+          />
+        </label>
+        <span style={{ marginLeft: 12, color: "#666" }}>
+          （保存時にここで選んだ日付が使われます）
+        </span>
+      </div>
 
       <div className="buttons">
         <button onClick={() => addRecord("勝ち", "✊")}>✊ 勝ち</button>
