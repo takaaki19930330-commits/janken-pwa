@@ -1,3 +1,4 @@
+// src/App.js
 import { useEffect, useState, useMemo } from "react";
 import "./App.css";
 import { loadRecords, saveRecords } from "./db";
@@ -54,6 +55,17 @@ export default function App() {
     if (records.length === 0) return 0;
     const sum = records.reduce((acc, r) => acc + (SCORE_MAP[r.result] || 0), 0);
     return Math.round((sum / records.length) * 100) / 100;
+  }, [records]);
+
+  // Sorted records: newest date first (YYYY-MM-DD lexicographically sorts correctly)
+  const sortedRecords = useMemo(() => {
+    return [...records].sort((a, b) => {
+      // If same date, keep insertion order by no-op fallback
+      if (!a.date && !b.date) return 0;
+      if (!a.date) return 1;
+      if (!b.date) return -1;
+      return b.date.localeCompare(a.date);
+    });
   }, [records]);
 
   return (
@@ -114,7 +126,7 @@ export default function App() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((r, i) => (
+                {sortedRecords.map((r, i) => (
                   <tr key={i}>
                     <td>{r.date}</td>
                     <td>{r.hand}</td>
