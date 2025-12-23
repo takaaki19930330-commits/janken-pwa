@@ -312,3 +312,16 @@
   }
 }
 
+.chart-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+.chart-date-label {
+  font-size: 14px;
+  font-weight: 700;
+}
+@media (max-width: 480px) {
+  .chart-date-label { font-size: 15px; }
+}
