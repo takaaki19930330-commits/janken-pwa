@@ -1,0 +1,10 @@
+{
+  "files": {
+    "main.js": "/janken-pwa/static/js/main.46a1dcfd.js",
+    "index.html": "/janken-pwa/index.html",
+    "main.46a1dcfd.js.map": "/janken-pwa/static/js/main.46a1dcfd.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.46a1dcfd.js"
+  ]
+}
