@@ -1,39 +1,33 @@
 // src/App.js
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { loadRecords, saveRecords } from "./db";
-import Stats from "./components/Stats";
+import { uploadRecord, fetchRemoteRecordsAndMerge, syncUp } from "./sync";
 import StylishInput from "./components/StylishInput";
+import Stats from "./components/Stats";
 
+const SCORE_MAP = { 勝ち: 40, あいこ: 20, 負け: 10 };
 const STORAGE_KEY = "janken_records_v1";
-const SCORE_MAP = {
-  勝ち: 40,
-  あいこ: 20,
-  負け: 10,
-};
 
 export default function App() {
   const [records, setRecords] = useState([]);
   const [history, setHistory] = useState([]);
-  const [selectedDate, setSelectedDate] = useState(() => {
-    const d = new Date();
-    return d.toISOString().slice(0, 10);
-  });
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState("input"); // "input" | "stats"
 
-  // 初期ロード
+  // 初期ロード: local -> merge remote -> setRecords -> try syncUp
   useEffect(() => {
-    // loadRecords may read localStorage or IndexedDB depending on db.js implementation
     (async () => {
       try {
-        const r = await loadRecords();
-        if (Array.isArray(r)) {
-          setRecords(r);
-        } else {
-          setRecords([]);
-        }
+        const local = loadRecords();
+        const merged = await fetchRemoteRecordsAndMerge(Array.isArray(local) ? local : []);
+        setRecords(Array.isArray(merged) ? merged : []);
+        // best-effort: upload any local-only ones
+        try {
+          await syncUp(merged);
+        } catch (e) {}
       } catch (e) {
-        console.warn("initial loadRecords failed, fallback to localStorage", e);
+        console.warn("initial load failed", e);
         try {
           const raw = localStorage.getItem(STORAGE_KEY);
           setRecords(raw ? JSON.parse(raw) : []);
@@ -44,24 +38,19 @@ export default function App() {
     })();
   }, []);
 
-  // saveRecords is kept for IndexedDB/cache backup if implemented; we still call it after state updates
+  // always keep localStorage in sync (synchronous)
   useEffect(() => {
     try {
-      // ensure localStorage is always the first line of defense (synchronous)
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
     } catch (e) {
-      console.warn("sync localStorage write failed in effect", e);
+      console.warn("localStorage write failed", e);
     }
-
-    // best-effort: call shared saveRecords (may be async)
     try {
       saveRecords(records);
-    } catch (e) {
-      // ignore
-    }
+    } catch (e) {}
   }, [records]);
 
-  // beforeunload guard: flush records
+  // beforeunload flush
   useEffect(() => {
     const flush = () => {
       try {
@@ -72,34 +61,26 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", flush);
   }, [records]);
 
-  // addRecord: synchronous localStorage write inside function for maximum reliability
   function addRecord(result, hand) {
-    const newRecord = {
-      date: selectedDate,
-      result,
-      hand,
-    };
-
-    // Update history (store shallow copy of previous records for undo)
+    const newRecord = { date: selectedDate, result, hand };
+    // save history for undo
     setHistory((h) => [...h, records.slice()]);
 
-    // Use functional update to avoid stale closures
+    // functional update to avoid stale closures
     setRecords((prev) => {
       const next = [...prev, newRecord];
 
-      // immediate synchronous write to localStorage
+      // immediate synchronous write
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
       } catch (e) {
-        console.warn("localStorage sync write failed in addRecord", e);
+        console.warn("localStorage sync write failed", e);
       }
 
-      // best-effort async save (db.js) — do not await
-      try {
-        saveRecords(next);
-      } catch (e) {
-        // ignore
-      }
+      // best-effort async upload
+      uploadRecord(newRecord).then((res) => {
+        if (!res.ok) console.warn("uploadRecord failed", res.error);
+      });
 
       return next;
     });
@@ -110,95 +91,76 @@ export default function App() {
     const prev = history[history.length - 1];
     setHistory((h) => h.slice(0, -1));
     setRecords(prev);
-
-    // also sync-localstore immediately
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(prev));
-    } catch (e) {
-      console.warn("localStorage write failed in undo", e);
-    }
-
+    } catch (e) {}
     try {
       saveRecords(prev);
     } catch (e) {}
   }
 
-  // average score (overall)
   const averageScore = useMemo(() => {
-    if (records.length === 0) return 0;
+    if (!records || records.length === 0) return 0;
     const sum = records.reduce((acc, r) => acc + (SCORE_MAP[r.result] || 0), 0);
     return Math.round((sum / records.length) * 100) / 100;
   }, [records]);
 
-  // sortedRecords: newest date first, then keep insertion order for same date
+  // newest-first display
   const sortedRecords = useMemo(() => {
     return [...records].sort((a, b) => {
       if (!a.date && !b.date) return 0;
       if (!a.date) return 1;
       if (!b.date) return -1;
-      // descending lexicographic comparison on YYYY-MM-DD is fine
       return b.date.localeCompare(a.date);
     });
   }, [records]);
 
   return (
     <div className="container">
-      <h1 className="title">じゃんけん記録</h1>
+      <h1>じゃんけん記録</h1>
 
-      <div className="tabbar" role="tablist">
-        <button className={`tab ${tab === "input" ? "active" : ""}`} onClick={() => setTab("input")}>
-          入力
-        </button>
-        <button className={`tab ${tab === "stats" ? "active" : ""}`} onClick={() => setTab("stats")}>
-          統計
-        </button>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button className={`tab ${tab === "input" ? "active" : ""}`} onClick={() => setTab("input")}>入力</button>
+        <button className={`tab ${tab === "stats" ? "active" : ""}`} onClick={() => setTab("stats")}>統計</button>
       </div>
 
       {tab === "input" ? (
         <>
-          <div className="date-row">
-            <label className="date-label">
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
+            <label>
               日付
-              <input
-                className="date-input"
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                aria-label="記録日付"
-              />
+              <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} style={{ marginLeft: 8 }} />
             </label>
 
-            <div className="avg-badge" aria-hidden>
-              平均得点
-              <div className="avg-value">{averageScore}</div>
+            <div style={{ marginLeft: "auto", textAlign: "right" }}>
+              <div style={{ fontSize: 12, color: "#666" }}>平均得点</div>
+              <div style={{ fontSize: 18, fontWeight: 700 }}>{averageScore}</div>
             </div>
           </div>
 
           <StylishInput onAdd={addRecord} defaultHand="✊" defaultResult="勝ち" />
 
-          <div className="action-row">
-            <button className="undo" onClick={undo}>
-              ↩ 戻る
-            </button>
+          <div style={{ marginTop: 18 }}>
+            <button onClick={undo} style={{ padding: "8px 12px", borderRadius: 8 }}>↩ 戻る</button>
           </div>
 
-          <div className="table-wrapper">
-            <table className="records-table">
+          <div style={{ marginTop: 24 }}>
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
-                  <th>日付</th>
-                  <th>手</th>
-                  <th>結果</th>
-                  <th>得点</th>
+                  <th style={{ textAlign: "left" }}>日付</th>
+                  <th style={{ textAlign: "left" }}>手</th>
+                  <th style={{ textAlign: "left" }}>結果</th>
+                  <th style={{ textAlign: "left" }}>得点</th>
                 </tr>
               </thead>
               <tbody>
                 {sortedRecords.map((r, i) => (
                   <tr key={i}>
-                    <td>{r.date}</td>
-                    <td>{r.hand}</td>
-                    <td>{r.result}</td>
-                    <td>{SCORE_MAP[r.result] ?? 0}</td>
+                    <td style={{ padding: "8px 0" }}>{r.date}</td>
+                    <td style={{ padding: "8px 0" }}>{r.hand}</td>
+                    <td style={{ padding: "8px 0" }}>{r.result}</td>
+                    <td style={{ padding: "8px 0" }}>{SCORE_MAP[r.result] ?? 0}</td>
                   </tr>
                 ))}
               </tbody>

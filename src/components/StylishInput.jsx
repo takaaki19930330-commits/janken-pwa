@@ -1,86 +1,78 @@
-import React, { useState, useEffect } from "react";
+// src/components/StylishInput.jsx
+import React, { useState } from "react";
+import "./StylishInput.css"; // 任意。既存App.cssがあれば不要
 
-/**
- * props:
- * - onAdd({ result, hand })  // 呼ぶと記録される
- * - defaultHand (optional)
- * - defaultResult (optional)
- */
+const HANDS = [
+  { key: "✊", label: "グー" },
+  { key: "✌️", label: "チョキ" },
+  { key: "✋", label: "パー" },
+];
+
+const RESULTS = ["勝ち", "あいこ", "負け"];
+
 export default function StylishInput({ onAdd, defaultHand = "✊", defaultResult = "勝ち" }) {
-  const hands = [
-    { key: "✊", label: "グー" },
-    { key: "✌️", label: "チョキ" },
-    { key: "✋", label: "パー" },
-  ];
-  const results = [
-    { key: "勝ち", color: "#16a34a" },
-    { key: "あいこ", color: "#f59e0b" },
-    { key: "負け", color: "#ef4444" },
-  ];
-
   const [hand, setHand] = useState(defaultHand);
   const [result, setResult] = useState(defaultResult);
-  const [confirmed, setConfirmed] = useState(false);
-
-  useEffect(() => setConfirmed(false), [hand, result]);
-
-  function handleConfirm() {
-    setConfirmed(true);
-    // small delay for UX (ボタンの押下感があると良い)
-    setTimeout(() => {
-      onAdd(result, hand);
-      setConfirmed(false);
-    }, 180);
-  }
 
   return (
     <div className="stylish-input">
-      <div className="si-top-row">
-        <div className="si-hand-picker" role="radiogroup" aria-label="手を選ぶ">
-          {hands.map((h) => (
-            <button
-              key={h.key}
-              className={`si-hand-card ${hand === h.key ? "active" : ""}`}
-              onClick={() => setHand(h.key)}
-              aria-pressed={hand === h.key}
-            >
-              <div className="si-hand-emoji">{h.key}</div>
-              <div className="si-hand-label">{h.label}</div>
-            </button>
-          ))}
-        </div>
-
-        <div className="si-result-picker" role="radiogroup" aria-label="結果を選ぶ">
-          {results.map((r) => (
-            <button
-              key={r.key}
-              className={`si-result-pill ${result === r.key ? "active" : ""}`}
-              onClick={() => setResult(r.key)}
-              style={result === r.key ? { boxShadow: `0 8px 18px ${r.color}22`, borderColor: r.color } : {}}
-              aria-pressed={result === r.key}
-            >
-              <div className="si-result-text">{r.key}</div>
-            </button>
-          ))}
-        </div>
+      <div className="hands-row" style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        {HANDS.map((h) => (
+          <button
+            key={h.key}
+            onClick={() => setHand(h.key)}
+            className={`hand-btn ${hand === h.key ? "active" : ""}`}
+            style={{
+              padding: "18px 28px",
+              borderRadius: 12,
+              boxShadow: hand === h.key ? "0 6px 20px rgba(37,99,235,0.18)" : "0 8px 20px rgba(2,6,23,0.04)",
+              background: "#fff",
+              border: "1px solid #eef2ff",
+              minWidth: 120,
+              textAlign: "center",
+              fontSize: 18,
+            }}
+            aria-pressed={hand === h.key}
+          >
+            <div style={{ fontSize: 28 }}>{h.key}</div>
+            <div style={{ marginTop: 6 }}>{h.label}</div>
+          </button>
+        ))}
       </div>
 
-      <div className="si-preview-row">
-        <div className="si-preview">
-          <div className="si-preview-hand">{hand}</div>
-          <div className="si-preview-info">
-            <div className="si-preview-result">{result}</div>
-            <div className="si-preview-sub">選択内容プレビュー</div>
-          </div>
-        </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, maxWidth: 240 }}>
+        {RESULTS.map((r) => (
+          <button
+            key={r}
+            onClick={() => setResult(r)}
+            className={`result-btn ${result === r ? "active" : ""}`}
+            style={{
+              padding: "12px 18px",
+              borderRadius: 999,
+              border: result === r ? "none" : "1px solid #eef2ff",
+              background: result === r ? "linear-gradient(90deg,#2563eb,#06b6d4)" : "#fff",
+              color: result === r ? "#fff" : "#111",
+              fontWeight: 700,
+            }}
+          >
+            {r}
+          </button>
+        ))}
+      </div>
 
+      <div style={{ marginTop: 18 }}>
         <button
-          className="si-confirm"
-          onClick={handleConfirm}
-          disabled={confirmed}
-          aria-disabled={confirmed}
+          onClick={() => onAdd(result, hand)}
+          style={{
+            padding: "12px 20px",
+            borderRadius: 16,
+            background: "linear-gradient(90deg,#06b6d4,#2563eb)",
+            color: "#fff",
+            fontWeight: 700,
+            boxShadow: "0 8px 30px rgba(6,182,212,0.14)",
+          }}
         >
-          {confirmed ? "記録中…" : "記録する"}
+          記録する
         </button>
       </div>
     </div>
