@@ -1,4 +1,4 @@
-/* src/App.css - main layout and control styles */
+/* src/App.css (full overwrite for clarity; includes previous styles + new) */
 
 :root {
   --muted: #6b7280;
@@ -20,14 +20,12 @@ body {
   padding: 18px;
 }
 
-/* page title */
 .title {
   font-size: 30px;
   margin: 0 0 12px 0;
   font-weight: 800;
 }
 
-/* top area */
 .top-controls {
   display: flex;
   gap: 12px;
@@ -36,7 +34,6 @@ body {
   flex-wrap: wrap;
   margin-bottom: 18px;
 }
-
 .tabs { display:flex; gap:8px; }
 .tab {
   padding: 8px 12px;
@@ -54,72 +51,109 @@ body {
   align-items: center;
   flex-wrap: wrap;
 }
-
-/* average display - keep one-line */
 .avg-wrap { display:flex; flex-direction:column; align-items:flex-end; min-width:100px; }
 .avg-label { font-size:12px; color:var(--muted); }
 .avg-value { font-size:20px; font-weight:800; }
 
-/* filter */
 .filter-wrap { display:flex; flex-direction:column; gap:4px; }
 .filter-label { font-size:12px; color:var(--muted); }
 
-/* control item */
 .control-item { min-width: 200px; display:flex; flex-direction:column; gap:6px; }
 .control-label { font-size:13px; color:#111827; display:flex; align-items:center; gap:8px; }
-.control-label .info {
-  display:inline-block;
-  width:18px; height:18px; border-radius:50%; background:#eef2ff; color:var(--accent); text-align:center; line-height:18px; font-weight:700; cursor:default;
+.info-btn {
+  width:22px; height:22px; border-radius:50%; background:#eef2ff; border:none; color:var(--accent); font-weight:700; cursor:pointer;
 }
 .slider { width:100%; }
-
-/* explain small text */
 .control-help { font-size:12px; color:var(--muted); }
 
-/* date row */
 .date-row { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
 
-/* undo */
 .undo-btn { padding:8px 10px; border-radius:8px; }
 
-/* records table */
 .records-table table { width:100%; border-collapse:collapse; margin-top:18px; }
 .records-table th, .records-table td { text-align:left; padding:8px 6px; border-bottom: 1px solid #f3f4f6; }
-
-/* delete button */
 .del-btn { background:#f3f4f6; border:none; padding:6px 8px; border-radius:8px; cursor:pointer; }
 
-/* small screens */
-@media (max-width:720px) {
-  .container { padding:12px; }
-  .top-controls { gap:10px; }
-  .control-item { min-width: 140px; }
+/* Info popover */
+.info-popover {
+  position: fixed;
+  left: 50%;
+  top: 18%;
+  transform: translateX(-50%);
+  z-index: 1200;
+}
+.info-popover-inner {
+  background: white;
+  padding: 12px 14px;
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(2,6,23,0.12);
+  max-width: 360px;
+}
+.info-popover .close-pop {
+  margin-top: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
 }
 
-/* Stats component hooks */
+/* Stats styles (chart + tooltip + cards) */
 .stats-root { display:flex; flex-direction:column; gap:12px; }
 .stats-header { display:flex; justify-content:space-between; align-items:center; }
-.chart-scroll { border-radius:12px; background: transparent; padding-bottom:8px; }
+.chart-scroll { border-radius:12px; background: transparent; padding-bottom:8px; position: relative; }
 
-/* hand summary and rec card layout */
-.hand-summary-row { display:flex; gap:12px; flex-wrap:wrap; }
-.hand-summary-card, .rec-card { background:var(--bg); border-radius:12px; padding:12px; box-shadow: 0 8px 20px rgba(2,6,23,0.04); }
+/* point tooltip */
+.point-tooltip {
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  box-shadow: 0 10px 24px rgba(2,6,23,0.12);
+  min-width: 120px;
+  z-index: 100;
+}
 
-/* tooltip via title attribute is okay; improve touch hint by showing text below control via .control-help */
-.card-title { font-weight:800; margin-bottom:6px; font-size:14px; }
+/* hand summary & rec */
+.hand-summary-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
+.hand-summary-card, .rec-card { background:var(--bg); border-radius:12px; padding:12px; box-shadow: 0 8px 20px rgba(2,6,23,0.04); min-width: 220px; }
 
-/* small helper */
-.stats-note { font-size:12px; color:var(--muted); }
+/* Stylish input */
+.stylish-input-root { display:flex; flex-direction:column; gap:12px; margin-top:8px; }
+.recommend-row { display:flex; gap:12px; align-items:center; }
+.rec-pill { background:#fff; padding:8px 12px; border-radius:999px; box-shadow: 0 8px 18px rgba(2,6,23,0.04); display:flex; align-items:center; gap:8px; }
+.rec-reason { color:#666; font-size:12px; margin-left:6px; }
 
-/* ensure long control labels wrap nicely */
+.hands-row { display:flex; gap:12px; margin-top:8px; }
+.hand-card {
+  background:#fff; border-radius:12px; padding:14px; min-width:110px; flex:1;
+  display:flex; flex-direction:column; gap:8px; align-items:center; box-shadow: 0 8px 18px rgba(2,6,23,0.03);
+  border: 1px solid transparent; cursor:pointer;
+}
+.hand-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 12px 28px rgba(37,99,235,0.12);
+  transform: translateY(-4px);
+}
+.hand-emoji { font-size:28px; }
+.hand-label { font-weight:800; margin-top:4px; }
+.hand-meta { display:flex; gap:8px; align-items:center; font-size:12px; color:#444; margin-top:6px; }
+
+/* result buttons */
+.result-row { display:flex; gap:12px; margin-top:10px; }
+.result-btn {
+  padding:10px 14px; border-radius:999px; border:none; background:#f3f6fb; cursor:pointer; font-weight:700;
+}
+.result-btn.active { background: linear-gradient(90deg,#06b6d4,#2563eb); color:#fff; box-shadow:0 8px 18px rgba(2,6,23,0.06); }
+
+.add-btn { margin-top:8px; padding:12px 18px; border-radius:14px; background: linear-gradient(90deg,#06b6d4,#2563eb); color:white; border:none; cursor:pointer; font-weight:800; }
+
+/* generic small close button inside popovers */
+.close-pop { padding:6px 8px; border-radius:8px; }
+
+/* responsive */
+@media (max-width:720px) {
+  .hand-card { min-width: 90px; padding:12px; }
+  .hand-meta { font-size:11px; }
+}
+
+/* small improvements */
 .control-label { white-space: normal; }
-
-/* ensure expected vs etc don't get cut */
 .right-controls > .control-item, .right-controls > .filter-wrap, .right-controls > .avg-wrap { min-width: 140px; }
 
-/* compact adjustments for phone */
-@media (max-width:420px) {
-  .avg-value { font-size:18px; }
-  .control-item { min-width: 120px; }
-  .filter-wrap select { width: 100%; }
-}

@@ -1,104 +1,80 @@
 // src/components/StylishInput.jsx
-import React, { useEffect, useState } from "react";
-import "./StylishInput.css";
+import React, { useState, useEffect } from "react";
 
-const HANDS = [
-  { key: "✊", label: "グー" },
-  { key: "✌️", label: "チョキ" },
-  { key: "✋", label: "パー" },
-];
-
-const RESULTS = ["勝ち", "あいこ", "負け"];
-
+/**
+ * Props:
+ * - onAdd(result, hand)
+ * - defaultHand
+ * - defaultResult
+ * - recommendedHand
+ * - recommendationReason
+ * - predictionStats
+ */
 export default function StylishInput({
   onAdd,
   defaultHand = "✊",
   defaultResult = "勝ち",
-  recommendedHand = null,
-  recommendationReason = "",
+  recommendedHand,
+  recommendationReason,
   predictionStats = {},
 }) {
   const [hand, setHand] = useState(defaultHand);
   const [result, setResult] = useState(defaultResult);
 
   useEffect(() => {
-    if (recommendedHand) {
-      setHand(recommendedHand);
-    }
-  }, [recommendedHand]);
+    setHand(defaultHand);
+  }, [defaultHand]);
 
-  function percentFromExpected(expected) {
-    const MAX = 40;
-    if (!expected || expected <= 0) return 0;
-    const p = Math.round((expected / MAX) * 100);
-    return Math.min(100, Math.max(0, p));
+  function handleAdd() {
+    if (!hand || !result) return;
+    onAdd(result, hand);
   }
 
   return (
-    <div className="stylish-input">
+    <div className="stylish-input-root">
       <div className="recommend-row">
         <div className="rec-label">Recommendation</div>
-        <div className="rec-pill" aria-hidden>
-          <div className="rec-emoji">{recommendedHand}</div>
-          <div className="rec-reason">{recommendationReason}</div>
-        </div>
+        <div className="rec-pill">{recommendedHand ?? "—"} <span className="rec-reason">{recommendationReason}</span></div>
       </div>
 
-      <div className="hands-grid" role="list">
-        {HANDS.map((h) => {
-          const s = predictionStats[h.key] || { expected: 0, winRate: 0, count: 0 };
-          const isActive = hand === h.key;
-          const pct = percentFromExpected(s.expected);
+      <div className="hands-row">
+        {["✊","✌️","✋"].map((h) => {
+          const s = predictionStats[h] || {};
+          const isSelected = hand === h;
           return (
-            <div className="hand-card" key={h.key} role="listitem" aria-label={`${h.label} card`}>
-              <button
-                onClick={() => setHand(h.key)}
-                className={`hand-btn ${isActive ? "active" : ""}`}
-                aria-pressed={isActive}
-              >
-                <div className="hand-emoji">{h.key}</div>
-                <div className="hand-label">{h.label}</div>
-              </button>
-
-              <div className="hand-meta-row">
-                <div className="meta-left">
-                  <div className="meta-count">{s.count} plays</div>
-                  <div className="meta-win">W: {((s.winRate || 0) * 100).toFixed(0)}%</div>
-                </div>
-                <div className="meta-space" />
+            <button
+              key={h}
+              className={`hand-card ${isSelected ? 'selected' : ''}`}
+              onClick={() => setHand(h)}
+              aria-pressed={isSelected}
+            >
+              <div className="hand-emoji">{h}</div>
+              <div className="hand-label">
+                {h === "✊" ? "グー" : h === "✌️" ? "チョキ" : "パー"}
               </div>
-
-              {/* expected bar is moved into its own full-width row to avoid overlap */}
-              <div className="expected-row" title={`Expected: ${Math.round((s.expected||0)*100)/100}`}>
-                <div className="expected-bar-bg" aria-hidden>
-                  <div
-                    className="expected-bar-fill"
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-                <div className="expected-value">{Math.round((s.expected || 0) * 100) / 100}</div>
+              <div className="hand-meta">
+                <div className="plays">{(s.count||0) + " plays"}</div>
+                <div className="expected">{Math.round((s.expected||0)*100)/100}</div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
 
-      <div className="results-row">
-        {RESULTS.map((r) => (
+      <div className="result-row">
+        {["勝ち","あいこ","負け"].map((r) => (
           <button
             key={r}
+            className={`result-btn ${result === r ? 'active' : ''}`}
             onClick={() => setResult(r)}
-            className={`result-btn ${result === r ? "active" : ""}`}
           >
             {r}
           </button>
         ))}
       </div>
 
-      <div className="submit-row">
-        <button onClick={() => onAdd(result, hand)} className="submit-btn">
-          記録する
-        </button>
+      <div style={{ marginTop: 12 }}>
+        <button className="add-btn" onClick={handleAdd}>記録する</button>
       </div>
     </div>
   );

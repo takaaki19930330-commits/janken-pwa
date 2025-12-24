@@ -28,11 +28,11 @@ function normalizeRecord(raw) {
   return r;
 }
 
+/** simple weighting + hybrid scoring (same as before) */
 function daysAgo(ts) {
   const msPerDay = 1000 * 60 * 60 * 24;
   return (Date.now() - ts) / msPerDay;
 }
-
 function computeWeightedStats(records, options) {
   const { sensitivity = 0.5, alpha = 0.8 } = options || {};
   const lambda = sensitivity * 0.45;
@@ -80,13 +80,25 @@ function computeWeightedStats(records, options) {
   return { stats, recommendedHand, best };
 }
 
+/** small reusable popover for the info "i" icons */
+function InfoPopover({ text, isOpen, onClose, anchorId }) {
+  if (!isOpen) return null;
+  return (
+    <div className="info-popover" role="dialog" aria-labelledby={anchorId}>
+      <div className="info-popover-inner">
+        <div style={{ fontSize: 14, marginBottom: 6 }}>{text}</div>
+        <button className="close-pop" onClick={onClose}>Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [records, setRecords] = useState([]);
   const [history, setHistory] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState("input");
 
-  // default control values
   const DEFAULT_SENSITIVITY = 0.5;
   const DEFAULT_ALPHA = 0.8;
   const DEFAULT_WINDOW = "ALL";
@@ -94,6 +106,9 @@ export default function App() {
   const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
   const [alpha, setAlpha] = useState(DEFAULT_ALPHA);
   const [windowMode, setWindowMode] = useState(DEFAULT_WINDOW);
+
+  // info popovers state
+  const [infoKey, setInfoKey] = useState(null); // 'recency' | 'alpha' | null
 
   useEffect(() => {
     (async () => {
@@ -200,8 +215,14 @@ export default function App() {
     return Math.round((sum / filteredByWindow.length) * 100) / 100;
   }, [filteredByWindow]);
 
+  // info texts (show formula)
+  const recencyInfo = `Recency weighting: weight = exp(-λ * ageDays)  where λ = sensitivity * 0.45.
+Higher sensitivity => recent records have larger relative weight.`;
+  const alphaInfo = `FinalScore = α * expected_value + (1-α) * (winRate * 40)
+Where expected_value = weighted average score (40/20/10), winRate in [0..1].`;
+
   return (
-    <div className="container">
+    <div className="container" onClick={() => setInfoKey(null)}>
       <h1 className="title">じゃんけん記録</h1>
 
       <div className="top-controls">
@@ -226,10 +247,10 @@ export default function App() {
             </select>
           </div>
 
-          <div className="control-item">
+          <div className="control-item" onClick={(e)=>e.stopPropagation()}>
             <div className="control-label">
               Recency sensitivity
-              <span className="info" title="最近の記録をどれだけ重視するか。右にスライドすると“直近”の結果が急速に反映されます。">i</span>
+              <button className="info-btn" onClick={(e)=>{ e.stopPropagation(); setInfoKey(infoKey==='recency'?null:'recency'); }}>i</button>
             </div>
             <input
               type="range"
@@ -243,10 +264,10 @@ export default function App() {
             <div className="control-help">0 = 長期平均寄り / 1 = 直近を強く反映</div>
           </div>
 
-          <div className="control-item">
+          <div className="control-item" onClick={(e)=>e.stopPropagation()}>
             <div className="control-label">
               Expected vs WinRate
-              <span className="info" title="期待値(得点) と 勝率 のどちらを重視して推薦するか。右に寄せるほど期待値寄りです。">i</span>
+              <button className="info-btn" onClick={(e)=>{ e.stopPropagation(); setInfoKey(infoKey==='alpha'?null:'alpha'); }}>i</button>
             </div>
             <input
               type="range"
@@ -265,6 +286,18 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* Info popovers (rendered near top of container) */}
+      <InfoPopover
+        isOpen={infoKey === 'recency'}
+        onClose={() => setInfoKey(null)}
+        text={recencyInfo}
+      />
+      <InfoPopover
+        isOpen={infoKey === 'alpha'}
+        onClose={() => setInfoKey(null)}
+        text={alphaInfo}
+      />
 
       {tab === "input" ? (
         <>

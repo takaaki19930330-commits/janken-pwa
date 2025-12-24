@@ -1,14 +1,16 @@
 // src/components/Stats.jsx
-import React, { useMemo } from "react";
+import React, { useMemo, useRef, useState } from "react";
 
 /**
- * SVG line chart + expected horizontal line (baseline from scoreMap).
+ * SVG line chart + expected horizontal line + point tooltip on tap.
  * Props:
  *  - records: filtered array
- *  - scoreMap: mapping { 勝ち:40, あいこ:20, 負け:10 }
+ *  - scoreMap: mapping
  */
 export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }) {
-  // group daily averages
+  const containerRef = useRef(null);
+  const [selectedPoint, setSelectedPoint] = useState(null); // {date, avg, x, y}
+
   const daily = useMemo(() => {
     const map = new Map();
     for (const r of records) {
@@ -24,7 +26,6 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
     return arr;
   }, [records, scoreMap]);
 
-  // baseline expected value from scoreMap (配点から期待される得点)
   const expectedBaseline = useMemo(() => {
     const vals = Object.values(scoreMap).filter(v => typeof v === "number");
     if (vals.length === 0) return 0;
@@ -32,7 +33,6 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
     return Math.round((sum / vals.length) * 100) / 100;
   }, [scoreMap]);
 
-  // chart layout
   const maxVal = 40;
   const width = Math.max(320, daily.length * 80);
   const height = 160;
@@ -46,7 +46,7 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
 
   const pathD = points.map((p, i) => `${i===0?'M':'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
 
-  // hand stats: count wins/draws/losses per hand correctly
+  // hand stats corrected
   const handStats = useMemo(() => {
     const hands = ["✊","✌️","✋"];
     const out = { "✊":{count:0,win:0,draw:0,loss:0}, "✌️":{count:0,win:0,draw:0,loss:0}, "✋":{count:0,win:0,draw:0,loss:0} };
@@ -61,7 +61,6 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
     for (const k of Object.keys(out)) {
       const s = out[k];
       s.winRate = s.count ? s.win / s.count : 0;
-      // correct avg score using wins/draws/losses
       s.avgScore = s.count ? ((s.win * (scoreMap["勝ち"] ?? 40) + s.draw * (scoreMap["あいこ"] ?? 20) + s.loss * (scoreMap["負け"] ?? 10)) / s.count) : 0;
     }
     return out;
@@ -69,16 +68,25 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
 
   const valueToY = (val) => padding.top + (1 - (val / maxVal)) * (height - padding.top - padding.bottom);
 
+  function onPointClick(pt, ev) {
+    ev.stopPropagation();
+    // compute container offset
+    const rect = containerRef.current?.getBoundingClientRect();
+    const left = rect ? rect.left : 0;
+    const top = rect ? rect.top : 0;
+    // set tooltip position relative to container
+    setSelectedPoint({ date: pt.date, avg: Math.round(pt.avg*100)/100, x: pt.x, y: pt.y });
+  }
+
   return (
-    <div className="stats-root">
+    <div className="stats-root" ref={containerRef} onClick={() => setSelectedPoint(null)}>
       <div className="stats-header">
         <h2>平均得点の推移</h2>
         <div className="stats-note">横にスワイプして日ごとの推移を確認</div>
       </div>
 
-      <div className="chart-scroll" style={{ overflowX: 'auto' }}>
+      <div className="chart-scroll" style={{ overflowX: 'auto', position: 'relative' }}>
         <svg width={width} height={height} style={{ display: 'block' }}>
-          {/* grid */}
           {[0,0.25,0.5,0.75,1].map((t, idx) => {
             const y = padding.top + t * (height - padding.top - padding.bottom);
             const val = Math.round((1 - t) * maxVal);
@@ -90,12 +98,10 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
             );
           })}
 
-          {/* x labels */}
           {points.map((p, idx) => (
             <text key={idx} x={p.x} y={height - 6} textAnchor="middle" fontSize="10" fill="#444">{p.date}</text>
           ))}
 
-          {/* expected baseline (red dashed horizontal) */}
           {expectedBaseline > 0 && (
             <g>
               <line
@@ -114,19 +120,46 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
             </g>
           )}
 
-          {/* main line */}
           {points.length>0 && (
             <>
               <path d={pathD} fill="none" stroke="#2563eb" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
               {points.map((p, idx) => (
-                <circle key={idx} cx={p.x} cy={p.y} r={4.5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
+                <circle
+                  key={idx}
+                  cx={p.x}
+                  cy={p.y}
+                  r={6}
+                  fill="#fff"
+                  stroke="#2563eb"
+                  strokeWidth={2}
+                  style={{ cursor: 'pointer' }}
+                  onClick={(ev)=>onPointClick(p, ev)}
+                />
               ))}
             </>
           )}
         </svg>
+
+        {/* tooltip for selected point (absolute positioned within .chart-scroll) */}
+        {selectedPoint && (
+          <div
+            className="point-tooltip"
+            style={{
+              position: "absolute",
+              left: Math.max(8, selectedPoint.x - 40),
+              top: Math.max(8, selectedPoint.y - 44),
+              transform: "translateY(-100%)",
+            }}
+            onClick={(e)=>{ e.stopPropagation(); }}
+          >
+            <div style={{ fontWeight:800 }}>{selectedPoint.date}</div>
+            <div style={{ fontSize:13 }}>Average: {selectedPoint.avg}</div>
+            <div style={{ marginTop:6, textAlign:"right" }}><button className="close-pop" onClick={()=>setSelectedPoint(null)}>Close</button></div>
+          </div>
+        )}
       </div>
 
-      <div className="hand-summary-row">
+      <div className="hand-summary-row" style={{ marginTop: 12 }}>
         <div className="hand-summary-card">
           <div className="card-title">Hand summary</div>
           {["✊","✌️","✋"].map((h)=> {
