@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/janken-pwa/static/css/main.b72e04cb.css",
-    "main.js": "/janken-pwa/static/js/main.ada064a7.js",
+    "main.js": "/janken-pwa/static/js/main.64f67ec9.js",
     "index.html": "/janken-pwa/index.html",
     "main.b72e04cb.css.map": "/janken-pwa/static/css/main.b72e04cb.css.map",
-    "main.ada064a7.js.map": "/janken-pwa/static/js/main.ada064a7.js.map"
+    "main.64f67ec9.js.map": "/janken-pwa/static/js/main.64f67ec9.js.map"
   },
   "entrypoints": [
     "static/css/main.b72e04cb.css",
-    "static/js/main.ada064a7.js"
+    "static/js/main.64f67ec9.js"
   ]
 }
