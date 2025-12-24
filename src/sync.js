@@ -45,6 +45,7 @@ export async function uploadRecord(record) {
 }
 
 // fetch remote records for this device and merge (remote first, then local for dedupe)
+// Important: include created_at -> createdAt (ms) so front-end sorting by timestamp works
 export async function fetchRemoteRecordsAndMerge(localRecords = []) {
   try {
     const device_id = getDeviceId();
@@ -59,21 +60,20 @@ export async function fetchRemoteRecordsAndMerge(localRecords = []) {
       return localRecords;
     }
 
+    // Normalize remote rows to include createdAt (ms)
+    const remoteNormalized = (data || []).map((r) => ({
+      date: r.date,
+      result: r.result,
+      hand: r.hand,
+      createdAt: r.created_at ? new Date(r.created_at).getTime() : Date.now(),
+    }));
+
+    // merge remote (first) then local (dedupe)
     const key = (r) => `${r.date}|${r.result}|${r.hand}`;
     const seen = new Set();
     const merged = [];
 
-    // add remote first
-    for (const r of data) {
-      const k = key(r);
-      if (!seen.has(k)) {
-        merged.push({ date: r.date, result: r.result, hand: r.hand });
-        seen.add(k);
-      }
-    }
-
-    // then add local ones that are not present remotely
-    for (const r of localRecords) {
+    for (const r of remoteNormalized) {
       const k = key(r);
       if (!seen.has(k)) {
         merged.push(r);
@@ -81,7 +81,22 @@ export async function fetchRemoteRecordsAndMerge(localRecords = []) {
       }
     }
 
-    // save merged locally for safety
+    for (const r of localRecords) {
+      const k = key(r);
+      if (!seen.has(k)) {
+        // ensure local items have createdAt (if user created before change)
+        const withCreated = {
+          date: r.date,
+          result: r.result,
+          hand: r.hand,
+          createdAt: r.createdAt ?? Date.now(),
+        };
+        merged.push(withCreated);
+        seen.add(k);
+      }
+    }
+
+    // Save merged locally (ensure createdAt persisted)
     try {
       localStorage.setItem("janken_records_v1", JSON.stringify(merged));
     } catch (e) {
