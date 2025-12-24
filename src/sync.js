@@ -32,14 +32,58 @@ export async function uploadRecord(record) {
       result: record.result,
       hand: record.hand,
     };
-    const { error } = await supabase.from("records").insert(payload);
+    const { data, error } = await supabase.from("records").insert(payload).select("id,created_at");
     if (error) {
       console.warn("uploadRecord error", error);
       return { ok: false, error };
     }
-    return { ok: true };
+    // return server-generated metadata if needed
+    return { ok: true, data: data && data[0] ? data[0] : null };
   } catch (e) {
     console.warn("uploadRecord exception", e);
+    return { ok: false, error: e };
+  }
+}
+
+// Delete a record on Supabase matching device_id + date + result + hand
+// Strategy: find the most recent matching row (order by created_at desc, limit 1), then delete by id.
+export async function deleteRecordOnServer(record) {
+  try {
+    const device_id = getDeviceId();
+
+    // Find candidate row(s)
+    const { data: rows, error: selectError } = await supabase
+      .from("records")
+      .select("id,created_at")
+      .match({
+        device_id,
+        date: record.date,
+        result: record.result,
+        hand: record.hand,
+      })
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (selectError) {
+      console.warn("deleteRecordOnServer: select error", selectError);
+      return { ok: false, error: selectError };
+    }
+
+    if (!rows || rows.length === 0) {
+      // nothing to delete remotely
+      return { ok: true, deleted: 0 };
+    }
+
+    const idToDelete = rows[0].id;
+    const { error: deleteError } = await supabase.from("records").delete().eq("id", idToDelete);
+    if (deleteError) {
+      console.warn("deleteRecordOnServer: delete error", deleteError);
+      return { ok: false, error: deleteError };
+    }
+
+    return { ok: true, deleted: 1 };
+  } catch (e) {
+    console.warn("deleteRecordOnServer exception", e);
     return { ok: false, error: e };
   }
 }
@@ -51,7 +95,7 @@ export async function fetchRemoteRecordsAndMerge(localRecords = []) {
     const device_id = getDeviceId();
     const { data, error } = await supabase
       .from("records")
-      .select("date,result,hand,created_at")
+      .select("id,date,result,hand,created_at")
       .eq("device_id", device_id)
       .order("created_at", { ascending: true });
 
@@ -62,6 +106,7 @@ export async function fetchRemoteRecordsAndMerge(localRecords = []) {
 
     // Normalize remote rows to include createdAt (ms)
     const remoteNormalized = (data || []).map((r) => ({
+      id: r.id,
       date: r.date,
       result: r.result,
       hand: r.hand,
@@ -86,6 +131,7 @@ export async function fetchRemoteRecordsAndMerge(localRecords = []) {
       if (!seen.has(k)) {
         // ensure local items have createdAt (if user created before change)
         const withCreated = {
+          id: r.id ?? null,
           date: r.date,
           result: r.result,
           hand: r.hand,
