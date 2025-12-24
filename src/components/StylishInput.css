@@ -1,4 +1,4 @@
-/* src/components/StylishInput.css - overlap fix: separate expected bar row, increased min heights */
+/* src/components/StylishInput.css - fix: recommendation pill not truncating, responsive wrap */
 
 /* container */
 .stylish-input {
@@ -7,18 +7,28 @@
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* recommendation row */
+/* recommendation row
+   - allow wrapping so the pill can go to next line on small screens
+   - align-items flex-start so wrapped pill sits nicely
+*/
 .recommend-row {
   display: flex;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
   margin-bottom: 12px;
+  flex-wrap: wrap; /* allow wrapping */
 }
+
+/* label (fixed size) */
 .rec-label {
   font-weight: 800;
   font-size: 13px;
   color: #111827;
+  flex: 0 0 auto;
+  margin-top: 4px; /* visual align with pill when one-line */
 }
+
+/* pill: make it flexible so it can grow/shrink within available space */
 .rec-pill {
   display: flex;
   gap: 10px;
@@ -28,11 +38,55 @@
   padding: 6px 12px;
   border-radius: 999px;
   box-shadow: 0 6px 18px rgba(2,6,23,0.04);
+  flex: 1 1 auto; /* allow grow/shrink */
+  min-width: 0; /* critical for flex children to shrink properly */
+  max-width: 100%;
+  overflow: visible; /* allow its content to show/wrap */
 }
-.rec-emoji { font-size: 18px; }
-.rec-reason { font-size: 12px; color: #4b5563; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* grid for hands: ensures none overlap and equal width */
+/* emoji area */
+.rec-emoji {
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+/* reason text:
+   - allow wrapping to multiple lines (so text is never cut)
+   - on small screens limit to 2 lines visually
+*/
+.rec-reason {
+  font-size: 12px;
+  color: #4b5563;
+  white-space: normal; /* allow wrap */
+  overflow: visible;
+  text-overflow: clip;
+  line-height: 1.2;
+  max-width: 100%;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+}
+
+/* Desktop / wide: keep it a single line if it fits */
+@media (min-width: 520px) {
+  .rec-reason {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 420px;
+  }
+}
+
+/* For very small screens: allow 2 lines and slightly smaller font so pill stays compact */
+@media (max-width: 420px) {
+  .rec-reason {
+    font-size: 11px;
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* show up to 2 lines */
+    overflow: hidden;
+  }
+}
+
+/* grid for hands: keeps unchanged from previous design (safe defaults) */
 .hands-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -47,7 +101,6 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
-  /* ensure enough height so meta & expected bar don't overlap the button */
   min-height: 140px;
   padding-bottom: 6px;
 }
@@ -118,7 +171,7 @@
   height: 100%;
   background: #dc2626; /* red-600 */
   border-radius: 999px;
-  transition: width 260ms cubic-bezier(.2,.9,.2,1);
+  transition: width 260ms ease;
 }
 .expected-value {
   font-weight: 800;
@@ -180,6 +233,6 @@
 @media (max-width: 360px) {
   .hand-emoji { font-size: 24px; }
   .hand-label { font-size: 13px; }
-  .rec-reason { display: none; }
+  .rec-reason { display: -webkit-box; -webkit-line-clamp: 2; overflow: hidden; }
   .hand-card { min-height: 120px; }
 }
