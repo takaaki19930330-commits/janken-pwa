@@ -1,327 +1,125 @@
-/* 全体 */
+/* src/App.css - main layout and control styles */
+
+:root {
+  --muted: #6b7280;
+  --accent: #2563eb;
+  --bg: #ffffff;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  background: #fbfcfe;
+  color: #0f172a;
+  margin: 0;
+  padding: 0;
+}
+
 .container {
-  max-width: 900px;
+  max-width: 980px;
   margin: 20px auto;
-  padding: 16px;
-  font-family: "Helvetica Neue", Arial, sans-serif;
-  color: #222;
+  padding: 18px;
 }
 
-/* タイトル */
+/* page title */
 .title {
+  font-size: 30px;
   margin: 0 0 12px 0;
-  font-size: 1.6rem;
+  font-weight: 800;
 }
 
-/* タブ */
-.tabbar {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-.tab {
-  background: #f5f7fb;
-  border: 1px solid #e3e8f0;
-  padding: 8px 14px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-}
-.tab.active {
-  background: linear-gradient(90deg,#fff,#f0f7ff);
-  box-shadow: 0 4px 10px rgba(16,24,40,0.06);
-}
-
-/* 日付行 */
-.date-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-.date-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-.date-input {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid #dfe7f6;
-  font-size: 16px;
-  touch-action: manipulation; /* タッチ反応改善 */
-}
-
-/* 平均バッジ */
-.avg-badge {
-  display:flex;
-  align-items: center;
-  gap: 12px;
-  background: #fff;
-  border: 1px solid #eef3ff;
-  padding: 8px 12px;
-  border-radius: 12px;
-}
-.avg-value {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-/* じゃんけんボタンのグリッド */
-.buttons-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.janken-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 18px; /* タップ領域を大きく */
-  border-radius: 14px;
-  background: #fff;
-  border: 2px solid #ddd;
-  box-shadow: 0 6px 14px rgba(16,24,40,0.06);
-  cursor: pointer;
-  font-weight: 700;
-  transition: transform .08s ease, box-shadow .12s ease;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-.janken-btn:active {
-  transform: translateY(2px) scale(.995);
-  box-shadow: 0 3px 8px rgba(16,24,40,0.06);
-}
-.janken-emoji {
-  font-size: 1.8rem;
-}
-.janken-text {
-  font-size: 0.95rem;
-}
-
-/* アクション行 */
-.action-row {
-  margin-bottom: 14px;
-}
-.undo {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: #fff;
-  border: 1px solid #e6eef9;
-  cursor: pointer;
-}
-
-/* テーブル */
-.table-wrapper {
-  overflow-x: auto;
-  margin-top: 8px;
-}
-.records-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.records-table th, .records-table td {
-  padding: 8px 10px;
-  border-bottom: 1px solid #f2f6ff;
-  text-align: left;
-}
-
-/* 統計 */
-.stats-container {
-  margin-top: 8px;
-}
-.stats-summary {
-  display:flex;
-  gap: 18px;
-  margin-bottom: 12px;
-}
-.stats-label { font-size: 0.85rem; color: #666; }
-.stats-value { font-size: 1.3rem; font-weight:700; color: #111; }
-
-/* グラフカード */
-.chart-card {
-  background: #fff;
-  border-radius: 12px;
-  padding: 12px;
-  box-shadow: 0 6px 14px rgba(16,24,40,0.04);
-  margin-bottom: 12px;
-}
-
-/* レスポンシブ（スマホ） */
-@media (max-width: 480px) {
-  .container { padding: 10px; margin: 10px; }
-  .buttons-grid { gap: 8px; grid-template-columns: repeat(3, 1fr); }
-  .janken-btn { padding: 16px; border-radius: 12px; }
-  .date-input { font-size: 14px; padding: 8px; }
-  .janken-emoji { font-size: 1.6rem; }
-}
-
-/* ---------------------------
-   StylishInput: 洗練された入力UI
-   --------------------------- */
-.stylish-input {
-  margin: 10px 0 6px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* 上段：手と結果 */
-.si-top-row {
+/* top area */
+.top-controls {
   display: flex;
   gap: 12px;
   align-items: flex-start;
   justify-content: space-between;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
 }
 
-/* 手カード群 */
-.si-hand-picker {
-  display: flex;
-  gap: 10px;
-  flex: 1 1 60%;
-}
-
-.si-hand-card {
-  flex: 1 1 0;
-  background: linear-gradient(180deg,#ffffff,#fbfdff);
-  border: 1px solid #e6eef9;
-  border-radius: 14px;
-  padding: 14px 10px;
-  display:flex;
-  flex-direction: column;
-  gap:6px;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  transition: transform .12s ease, box-shadow .14s ease;
-  box-shadow: 0 8px 20px rgba(16,24,40,0.04);
-}
-.si-hand-card.active {
-  transform: translateY(-6px) scale(1.02);
-  box-shadow: 0 18px 40px rgba(37,99,235,0.12);
-  border: 1px solid rgba(37,99,235,0.18);
-}
-.si-hand-emoji {
-  font-size: 2rem;
-  line-height: 1;
-}
-.si-hand-label {
-  font-size: 0.95rem;
-  color: #333;
-  font-weight: 700;
-}
-
-/* 結果ピル */
-.si-result-picker {
-  display:flex;
-  gap:8px;
-  flex-direction: column;
-  width: 36%;
-  min-width: 120px;
-}
-.si-result-pill {
-  padding: 10px 12px;
-  border-radius: 999px;
+.tabs { display:flex; gap:8px; }
+.tab {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #eef2ff;
   background: #fff;
-  border: 1px solid #e9eef9;
   font-weight: 700;
-  cursor:pointer;
-  transition: transform .08s ease, box-shadow .14s ease;
-}
-.si-result-pill.active {
-  transform: translateY(-4px) scale(1.02);
-  color: #fff;
-  background: linear-gradient(90deg,#2563eb,#4f46e5);
-}
-
-/* プレビューと確定ボタン */
-.si-preview-row {
-  display:flex;
-  gap:12px;
-  align-items:center;
-  justify-content: space-between;
-}
-.si-preview {
-  display:flex;
-  gap:12px;
-  align-items:center;
-  background:#fff;
-  padding:10px 12px;
-  border-radius: 12px;
-  border:1px solid #f1f6ff;
-  box-shadow: 0 8px 20px rgba(16,24,40,0.03);
-}
-.si-preview-hand {
-  font-size:1.8rem;
-  padding:8px 10px;
-  border-radius:10px;
-  background: linear-gradient(180deg,#f8fafc,#ffffff);
-  box-shadow: inset 0 -2px 6px rgba(0,0,0,0.03);
-}
-.si-preview-info { display:flex; flex-direction:column; }
-.si-preview-result { font-weight:800; font-size:1rem; }
-.si-preview-sub { font-size:0.82rem; color:#666; }
-
-/* 確定ボタン */
-.si-confirm {
-  background: linear-gradient(90deg,#06b6d4,#2563eb);
-  color: #fff;
-  border: none;
-  padding: 12px 18px;
-  font-weight: 800;
-  border-radius: 12px;
   cursor: pointer;
-  box-shadow: 0 10px 30px rgba(37,99,235,0.12);
-  transition: transform .08s ease, box-shadow .12s ease;
 }
-.si-confirm:active { transform: translateY(2px) scale(.995); }
-.si-confirm[disabled] { opacity: 0.7; cursor: default; transform:none; box-shadow:none; }
+.tab.active { background: linear-gradient(90deg,#06b6d4,#2563eb); color: #fff; border: none; }
 
-/* モバイル微調整 */
-@media (max-width: 480px) {
-  .si-top-row { flex-direction: column; gap: 10px; }
-  .si-result-picker { flex-direction: row; width: 100%; }
-  .si-result-pill { flex:1 1 0; text-align:center; padding:12px 6px; }
-  .si-hand-picker { gap:8px; }
-  .si-hand-card { padding:12px; }
-  .si-preview-row { flex-direction: column; align-items: stretch; }
-  .si-confirm { width: 100%; }
-}
-/* chart scroll wrapper */
-.chart-scroll {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px; /* スクロールバー分の余白 */
+.right-controls {
+  display:flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-/* 日付ラベル：大きめで読みやすく。スマホではさらに大きく */
-.chart-date-label {
-  font-size: 13px;
-  font-weight: 700;
+/* average display - keep one-line */
+.avg-wrap { display:flex; flex-direction:column; align-items:flex-end; min-width:100px; }
+.avg-label { font-size:12px; color:var(--muted); }
+.avg-value { font-size:20px; font-weight:800; }
+
+/* filter */
+.filter-wrap { display:flex; flex-direction:column; gap:4px; }
+.filter-label { font-size:12px; color:var(--muted); }
+
+/* control item */
+.control-item { min-width: 200px; display:flex; flex-direction:column; gap:6px; }
+.control-label { font-size:13px; color:#111827; display:flex; align-items:center; gap:8px; }
+.control-label .info {
+  display:inline-block;
+  width:18px; height:18px; border-radius:50%; background:#eef2ff; color:var(--accent); text-align:center; line-height:18px; font-weight:700; cursor:default;
 }
-@media (max-width: 480px) {
-  .chart-date-label {
-    font-size: 14px;
-  }
+.slider { width:100%; }
+
+/* explain small text */
+.control-help { font-size:12px; color:var(--muted); }
+
+/* date row */
+.date-row { display:flex; gap:10px; align-items:center; margin-bottom:12px; }
+
+/* undo */
+.undo-btn { padding:8px 10px; border-radius:8px; }
+
+/* records table */
+.records-table table { width:100%; border-collapse:collapse; margin-top:18px; }
+.records-table th, .records-table td { text-align:left; padding:8px 6px; border-bottom: 1px solid #f3f4f6; }
+
+/* delete button */
+.del-btn { background:#f3f4f6; border:none; padding:6px 8px; border-radius:8px; cursor:pointer; }
+
+/* small screens */
+@media (max-width:720px) {
+  .container { padding:12px; }
+  .top-controls { gap:10px; }
+  .control-item { min-width: 140px; }
 }
 
-.chart-scroll {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  padding-bottom: 8px;
-}
-.chart-date-label {
-  font-size: 14px;
-  font-weight: 700;
-}
-@media (max-width: 480px) {
-  .chart-date-label { font-size: 15px; }
+/* Stats component hooks */
+.stats-root { display:flex; flex-direction:column; gap:12px; }
+.stats-header { display:flex; justify-content:space-between; align-items:center; }
+.chart-scroll { border-radius:12px; background: transparent; padding-bottom:8px; }
+
+/* hand summary and rec card layout */
+.hand-summary-row { display:flex; gap:12px; flex-wrap:wrap; }
+.hand-summary-card, .rec-card { background:var(--bg); border-radius:12px; padding:12px; box-shadow: 0 8px 20px rgba(2,6,23,0.04); }
+
+/* tooltip via title attribute is okay; improve touch hint by showing text below control via .control-help */
+.card-title { font-weight:800; margin-bottom:6px; font-size:14px; }
+
+/* small helper */
+.stats-note { font-size:12px; color:var(--muted); }
+
+/* ensure long control labels wrap nicely */
+.control-label { white-space: normal; }
+
+/* ensure expected vs etc don't get cut */
+.right-controls > .control-item, .right-controls > .filter-wrap, .right-controls > .avg-wrap { min-width: 140px; }
+
+/* compact adjustments for phone */
+@media (max-width:420px) {
+  .avg-value { font-size:18px; }
+  .control-item { min-width: 120px; }
+  .filter-wrap select { width: 100%; }
 }
