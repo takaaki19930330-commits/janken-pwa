@@ -2,13 +2,12 @@
 import React, { useMemo } from "react";
 
 /**
- * Lightweight SVG line chart for daily average scores.
+ * SVG line chart + expected horizontal line.
  * Props:
  *  - records: filtered array
  *  - scoreMap: mapping
  */
 export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }) {
-  // group by date asc
   const daily = useMemo(() => {
     const map = new Map();
     for (const r of records) {
@@ -24,23 +23,26 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
     return arr;
   }, [records, scoreMap]);
 
-  // simple bounds
+  // global expected (mean across records shown)
+  const expectedAvg = useMemo(() => {
+    if (!records || records.length === 0) return 0;
+    const sum = records.reduce((acc, r) => acc + (scoreMap[r.result] || 0), 0);
+    return Math.round((sum / records.length) * 100) / 100;
+  }, [records, scoreMap]);
+
   const maxVal = 40;
   const width = Math.max(320, daily.length * 80);
-  const height = 140;
-  const padding = { top: 12, right: 12, bottom: 26, left: 36 };
+  const height = 160;
+  const padding = { top: 12, right: 12, bottom: 34, left: 36 };
 
-  // points
   const points = daily.map((d, i) => {
     const x = padding.left + (i / Math.max(1, daily.length - 1)) * (width - padding.left - padding.right);
     const y = padding.top + (1 - (d.avg / maxVal)) * (height - padding.top - padding.bottom);
     return { x, y, ...d };
   });
 
-  // path d
   const pathD = points.map((p, i) => `${i===0?'M':'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
 
-  // hand summary (simple aggregates)
   const handStats = useMemo(() => {
     const hands = ["✊","✌️","✋"];
     const out = { "✊":{count:0,win:0}, "✌️":{count:0,win:0}, "✋":{count:0,win:0} };
@@ -58,6 +60,9 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
     return out;
   }, [records]);
 
+  // helper: convert value to y coord
+  const valueToY = (val) => padding.top + (1 - (val / maxVal)) * (height - padding.top - padding.bottom);
+
   return (
     <div className="stats-root">
       <div className="stats-header">
@@ -67,7 +72,6 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
 
       <div className="chart-scroll" style={{ overflowX: 'auto' }}>
         <svg width={width} height={height} style={{ display: 'block' }}>
-          {/* grid lines */}
           {[0,0.25,0.5,0.75,1].map((t, idx) => {
             const y = padding.top + t * (height - padding.top - padding.bottom);
             const val = Math.round((1 - t) * maxVal);
@@ -79,16 +83,33 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
             );
           })}
 
-          {/* axis bottom labels */}
           {points.map((p, idx) => (
             <text key={idx} x={p.x} y={height - 6} textAnchor="middle" fontSize="10" fill="#444">{p.date}</text>
           ))}
 
-          {/* line path */}
+          {/* expected horizontal red line */}
+          {records.length > 0 && (
+            <g>
+              <line
+                x1={padding.left}
+                x2={width - padding.right}
+                y1={valueToY(expectedAvg)}
+                y2={valueToY(expectedAvg)}
+                stroke="#dc2626"
+                strokeWidth={3}
+                strokeDasharray="6 4"
+                opacity={0.9}
+              />
+              <text x={width - padding.right - 6} y={valueToY(expectedAvg) - 6} fontSize="11" fill="#dc2626" textAnchor="end">
+                Expected {expectedAvg}
+              </text>
+            </g>
+          )}
+
+          {/* line and points */}
           {points.length>0 && (
             <>
               <path d={pathD} fill="none" stroke="#2563eb" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-              {/* circles */}
               {points.map((p, idx) => (
                 <circle key={idx} cx={p.x} cy={p.y} r={4.5} fill="#fff" stroke="#2563eb" strokeWidth={2} />
               ))}
@@ -103,15 +124,18 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
           {["✊","✌️","✋"].map((h)=> {
             const s = handStats[h];
             return (
-              <div key={h} className="hand-row">
-                <div className="hand-left">
-                  <div className="hand-emoji">{h}</div>
-                  <div className="hand-text">
-                    <div className="hand-count">{s.count} plays</div>
-                    <div className="hand-win">W: {(s.winRate*100).toFixed(0)}%</div>
+              <div key={h} className="hand-row" style={{display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:8}}>
+                <div style={{display:"flex", gap:8, alignItems:"center"}}>
+                  <div style={{fontSize:18}}>{h}</div>
+                  <div>
+                    <div style={{fontWeight:700}}>{s.count} plays</div>
+                    <div style={{fontSize:12, color:"#666"}}>W: {(s.winRate*100).toFixed(0)}%</div>
                   </div>
                 </div>
-                <div className="hand-score">{Math.round(s.avgScore*100)/100}</div>
+                <div style={{textAlign:"right"}}>
+                  <div style={{fontSize:12, color:"#666"}}>Avg score</div>
+                  <div style={{fontWeight:800, fontSize:16}}>{Math.round(s.avgScore*100)/100}</div>
+                </div>
               </div>
             );
           })}

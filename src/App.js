@@ -85,9 +85,15 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState("input");
-  const [sensitivity, setSensitivity] = useState(0.5);
-  const [alpha, setAlpha] = useState(0.8);
-  const [windowMode, setWindowMode] = useState("ALL");
+
+  // default control values
+  const DEFAULT_SENSITIVITY = 0.5;
+  const DEFAULT_ALPHA = 0.8;
+  const DEFAULT_WINDOW = "ALL";
+
+  const [sensitivity, setSensitivity] = useState(DEFAULT_SENSITIVITY);
+  const [alpha, setAlpha] = useState(DEFAULT_ALPHA);
+  const [windowMode, setWindowMode] = useState(DEFAULT_WINDOW);
 
   useEffect(() => {
     (async () => {
@@ -166,6 +172,12 @@ export default function App() {
     try { await deleteRecordOnServer(target); } catch {}
   }
 
+  function resetControls() {
+    setWindowMode(DEFAULT_WINDOW);
+    setSensitivity(DEFAULT_SENSITIVITY);
+    setAlpha(DEFAULT_ALPHA);
+  }
+
   const filteredByWindow = useMemo(() => {
     if (!records || records.length === 0) return [];
     if (windowMode === "ALL") return records.slice();
@@ -217,7 +229,7 @@ export default function App() {
           <div className="control-item">
             <div className="control-label">
               Recency sensitivity
-              <span className="info" data-tip="最近の記録をどれだけ重視するか。右にスライドすると“直近”の結果が急速に反映されます。">i</span>
+              <span className="info" title="最近の記録をどれだけ重視するか。右にスライドすると“直近”の結果が急速に反映されます。">i</span>
             </div>
             <input
               type="range"
@@ -234,7 +246,7 @@ export default function App() {
           <div className="control-item">
             <div className="control-label">
               Expected vs WinRate
-              <span className="info" data-tip="期待値(得点) と 勝率 のどちらを重視して推薦するか。右に寄せるほど期待値寄りです。">i</span>
+              <span className="info" title="期待値(得点) と 勝率 のどちらを重視して推薦するか。右に寄せるほど期待値寄りです。">i</span>
             </div>
             <input
               type="range"
@@ -246,6 +258,10 @@ export default function App() {
               className="slider"
             />
             <div className="control-help">0 = 勝率重視 / 1 = 期待値重視</div>
+          </div>
+
+          <div style={{display:"flex", alignItems:"center", gap:8}}>
+            <button onClick={resetControls} style={{padding:"8px 10px", borderRadius:8}}>Reset</button>
           </div>
         </div>
       </div>
