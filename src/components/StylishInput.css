@@ -1,9 +1,10 @@
-/* src/components/StylishInput.css */
+/* src/components/StylishInput.css - refined layout, horizontal expected bars */
 
 /* container */
 .stylish-input {
   background: transparent;
-  padding: 4px 0 0 0;
+  padding: 6px 0 0 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
 /* recommendation row */
@@ -11,12 +12,12 @@
   display: flex;
   gap: 10px;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 .rec-label {
-  font-weight: 700;
+  font-weight: 800;
   font-size: 13px;
-  color: #333;
+  color: #111827;
 }
 .rec-pill {
   display: flex;
@@ -24,40 +25,42 @@
   align-items: center;
   background: #ffffff;
   border: 1px solid #eef2ff;
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: 999px;
   box-shadow: 0 6px 18px rgba(2,6,23,0.04);
 }
-.rec-emoji { font-size: 20px; }
-.rec-reason { font-size: 12px; color: #666; }
+.rec-emoji { font-size: 18px; }
+.rec-reason { font-size: 12px; color: #4b5563; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* hands row - responsive grid */
-.hands-row {
-  display: flex;
-  gap: 10px;
-  justify-content: space-between;
+/* grid for hands: ensures none overlap and equal width */
+.hands-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
   margin-bottom: 12px;
 }
 
-/* each hand wrapper */
-.hand-wrap {
-  position: relative;
-  flex: 1 1 0;
+/* card that contains button + stats */
+.hand-card {
+  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
   min-width: 0;
 }
 
-/* hand button */
+/* the big button */
 .hand-btn {
   width: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
-  padding: 12px 8px;
-  border-radius: 12px;
+  padding: 14px 8px;
+  border-radius: 14px;
   border: 1px solid #eef2ff;
-  background: #fff;
-  box-shadow: 0 8px 20px rgba(2,6,23,0.04);
+  background: linear-gradient(180deg,#ffffff,#fbfeff);
+  box-shadow: 0 14px 30px rgba(2,6,23,0.06);
   cursor: pointer;
   transition: transform .12s ease, box-shadow .12s ease;
   text-align: center;
@@ -65,30 +68,67 @@
 .hand-btn:active { transform: translateY(1px); }
 
 .hand-btn.active {
-  box-shadow: 0 10px 30px rgba(37,99,235,0.18);
-  border: 1px solid rgba(37,99,235,0.2);
+  box-shadow: 0 20px 40px rgba(37,99,235,0.18);
+  border: 1px solid rgba(37,99,235,0.18);
 }
 
 /* emoji and label */
-.hand-emoji { font-size: 28px; line-height: 1; }
-.hand-label { margin-top: 2px; font-size: 14px; font-weight: 700; }
+.hand-emoji { font-size: 30px; line-height: 1; }
+.hand-label { margin-top: 2px; font-size: 15px; font-weight: 800; color: #0f172a; }
 
-/* badge in bottom-right */
-.hand-badge {
-  position: absolute;
-  right: 4px;
-  bottom: -8px;
-  background: #fff;
-  border-radius: 8px;
-  padding: 6px 8px;
-  font-size: 11px;
-  box-shadow: 0 6px 18px rgba(2,6,23,0.04);
-  border: 1px solid #eee;
-  min-width: 70px;
-  text-align: center;
+/* metadata area below the button */
+.hand-meta {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
 }
-.badge-count { font-weight: 700; font-size: 12px; }
-.badge-line { color: #666; font-size: 11px; }
+
+/* left meta block (count & win) */
+.meta-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 72px;
+}
+.meta-count { font-weight: 700; font-size: 12px; color: #111827; }
+.meta-win { font-size: 11px; color: #6b7280; }
+
+/* expected area: horizontal bar + numeric value */
+.expected-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* background (track) */
+.expected-bar-bg {
+  flex: 1 1 auto;
+  height: 12px;
+  background: #f3f4f6;
+  border-radius: 999px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
+}
+
+/* fill (red, a bit thick) */
+.expected-bar-fill {
+  height: 100%;
+  background: #dc2626; /* red-600 */
+  border-radius: 999px 0 0 999px;
+  transition: width 220ms ease;
+}
+
+/* numeric label to the right */
+.expected-value {
+  font-weight: 800;
+  font-size: 12px;
+  color: #111827;
+  min-width: 38px;
+  text-align: right;
+}
 
 /* results row */
 .results-row {
@@ -103,7 +143,8 @@
   border: 1px solid #eef2ff;
   background: #fff;
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 14px;
 }
 .result-btn.active {
   background: linear-gradient(90deg,#2563eb,#06b6d4);
@@ -124,19 +165,21 @@
   cursor: pointer;
 }
 
-/* RESPONSIVE TWEAKS for small screens (iPhone) */
+/* RESPONSIVE: compress gracefully on small screens (iPhone) */
 @media (max-width: 420px) {
-  .hand-emoji { font-size: 24px; }
-  .hand-label { font-size: 13px; }
-  .hand-btn { padding: 10px 6px; border-radius: 10px; }
-  .hand-badge { right: 2px; bottom: -6px; padding: 5px 6px; min-width: 56px; font-size: 10px; }
-  .hands-row { gap: 8px; }
+  .hands-grid { gap: 8px; }
+  .hand-emoji { font-size: 26px; }
+  .hand-label { font-size: 14px; }
+  .hand-btn { padding: 12px 6px; border-radius: 12px; }
+  .expected-bar-bg { height: 10px; }
+  .expected-value { font-size: 11px; min-width: 34px; }
+  .meta-count { font-size: 11px; }
+  .meta-win { font-size: 10px; }
 }
 
-/* smaller phones - shrink even more */
+/* very small phones */
 @media (max-width: 360px) {
-  .hand-emoji { font-size: 22px; }
-  .hand-label { font-size: 12px; }
-  .hand-btn { padding: 8px 6px; }
-  .rec-reason { display: none; } /* save space */
+  .hand-emoji { font-size: 24px; }
+  .hand-label { font-size: 13px; }
+  .rec-reason { display: none; }
 }
