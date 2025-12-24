@@ -1,4 +1,4 @@
-/* src/App.css (full overwrite for clarity; includes previous styles + new) */
+/* src/App.css (overwrite) */
 
 :root {
   --muted: #6b7280;
@@ -72,45 +72,31 @@ body {
 
 .records-table table { width:100%; border-collapse:collapse; margin-top:18px; }
 .records-table th, .records-table td { text-align:left; padding:8px 6px; border-bottom: 1px solid #f3f4f6; }
-.del-btn { background:#f3f4f6; border:none; padding:6px 8px; border-radius:8px; cursor:pointer; }
-
-/* Info popover */
-.info-popover {
-  position: fixed;
-  left: 50%;
-  top: 18%;
-  transform: translateX(-50%);
-  z-index: 1200;
-}
-.info-popover-inner {
-  background: white;
-  padding: 12px 14px;
-  border-radius: 12px;
-  box-shadow: 0 12px 30px rgba(2,6,23,0.12);
-  max-width: 360px;
-}
-.info-popover .close-pop {
-  margin-top: 8px;
-  padding: 6px 10px;
-  border-radius: 8px;
-}
+.del-btn { background:#f3f6fb; border:none; padding:6px 8px; border-radius:8px; cursor:pointer; }
 
 /* Stats styles (chart + tooltip + cards) */
 .stats-root { display:flex; flex-direction:column; gap:12px; }
-.stats-header { display:flex; justify-content:space-between; align-items:center; }
-.chart-scroll { border-radius:12px; background: transparent; padding-bottom:8px; position: relative; }
+.stats-header { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.stats-title {
+  font-size:22px;
+  font-weight:800;
+  margin:0;
+  white-space:nowrap;           /* prevent wrapping */
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stats-note { font-size:13px; color:var(--muted); }
 
-/* point tooltip */
-.point-tooltip {
-  background: #fff;
-  border-radius: 8px;
-  padding: 8px 10px;
-  box-shadow: 0 10px 24px rgba(2,6,23,0.12);
-  min-width: 120px;
-  z-index: 100;
+/* ensure smaller screens reduce the title size so it fits on one line */
+@media (max-width:460px) {
+  .stats-title { font-size:18px; }
+  .title { font-size:26px; }
 }
 
-/* hand summary & rec */
+/* chart */
+.chart-scroll { border-radius:12px; background: transparent; padding-bottom:8px; position: relative; }
+
+/* point label's SVG styling is handled inline; generic container styles below */
 .hand-summary-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:6px; }
 .hand-summary-card, .rec-card { background:var(--bg); border-radius:12px; padding:12px; box-shadow: 0 8px 20px rgba(2,6,23,0.04); min-width: 220px; }
 
@@ -144,10 +130,7 @@ body {
 
 .add-btn { margin-top:8px; padding:12px 18px; border-radius:14px; background: linear-gradient(90deg,#06b6d4,#2563eb); color:white; border:none; cursor:pointer; font-weight:800; }
 
-/* generic small close button inside popovers */
-.close-pop { padding:6px 8px; border-radius:8px; }
-
-/* responsive */
+/* responsive adjustments */
 @media (max-width:720px) {
   .hand-card { min-width: 90px; padding:12px; }
   .hand-meta { font-size:11px; }
@@ -156,4 +139,3 @@ body {
 /* small improvements */
 .control-label { white-space: normal; }
 .right-controls > .control-item, .right-controls > .filter-wrap, .right-controls > .avg-wrap { min-width: 140px; }
-
