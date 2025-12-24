@@ -1,4 +1,4 @@
-/* src/components/StylishInput.css - refined layout, horizontal expected bars */
+/* src/components/StylishInput.css - overlap fix: separate expected bar row, increased min heights */
 
 /* container */
 .stylish-input {
@@ -47,6 +47,9 @@
   flex-direction: column;
   gap: 8px;
   min-width: 0;
+  /* ensure enough height so meta & expected bar don't overlap the button */
+  min-height: 140px;
+  padding-bottom: 6px;
 }
 
 /* the big button */
@@ -76,15 +79,14 @@
 .hand-emoji { font-size: 30px; line-height: 1; }
 .hand-label { margin-top: 2px; font-size: 15px; font-weight: 800; color: #0f172a; }
 
-/* metadata area below the button */
-.hand-meta {
+/* metadata row directly below button */
+.hand-meta-row {
   display: flex;
-  gap: 8px;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
 }
-
-/* left meta block (count & win) */
 .meta-left {
   display: flex;
   flex-direction: column;
@@ -94,39 +96,35 @@
 .meta-count { font-weight: 700; font-size: 12px; color: #111827; }
 .meta-win { font-size: 11px; color: #6b7280; }
 
-/* expected area: horizontal bar + numeric value */
-.expected-wrap {
+/* empty space to push meta-left to left */
+.meta-space { flex: 1 1 auto; }
+
+/* expected row: full-width under meta, separate to avoid overlap */
+.expected-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1 1 0;
-  min-width: 0;
+  padding: 0 4px;
 }
-
-/* background (track) */
 .expected-bar-bg {
   flex: 1 1 auto;
-  height: 12px;
+  height: 14px;
   background: #f3f4f6;
   border-radius: 999px;
   overflow: hidden;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.04);
 }
-
-/* fill (red, a bit thick) */
 .expected-bar-fill {
   height: 100%;
   background: #dc2626; /* red-600 */
-  border-radius: 999px 0 0 999px;
-  transition: width 220ms ease;
+  border-radius: 999px;
+  transition: width 260ms cubic-bezier(.2,.9,.2,1);
 }
-
-/* numeric label to the right */
 .expected-value {
   font-weight: 800;
   font-size: 12px;
   color: #111827;
-  min-width: 38px;
+  min-width: 44px;
   text-align: right;
 }
 
@@ -171,10 +169,11 @@
   .hand-emoji { font-size: 26px; }
   .hand-label { font-size: 14px; }
   .hand-btn { padding: 12px 6px; border-radius: 12px; }
-  .expected-bar-bg { height: 10px; }
-  .expected-value { font-size: 11px; min-width: 34px; }
+  .expected-bar-bg { height: 12px; }
+  .expected-value { font-size: 11px; min-width: 36px; }
   .meta-count { font-size: 11px; }
   .meta-win { font-size: 10px; }
+  .hand-card { min-height: 130px; }
 }
 
 /* very small phones */
@@ -182,4 +181,5 @@
   .hand-emoji { font-size: 24px; }
   .hand-label { font-size: 13px; }
   .rec-reason { display: none; }
+  .hand-card { min-height: 120px; }
 }

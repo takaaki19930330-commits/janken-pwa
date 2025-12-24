@@ -27,9 +27,8 @@ export default function StylishInput({
     }
   }, [recommendedHand]);
 
-  // helper: compute percent (0-100) from expected (max 40)
   function percentFromExpected(expected) {
-    const MAX = 40; // 勝ち=40が最大想定
+    const MAX = 40;
     if (!expected || expected <= 0) return 0;
     const p = Math.round((expected / MAX) * 100);
     return Math.min(100, Math.max(0, p));
@@ -39,7 +38,7 @@ export default function StylishInput({
     <div className="stylish-input">
       <div className="recommend-row">
         <div className="rec-label">Recommendation</div>
-        <div className="rec-pill">
+        <div className="rec-pill" aria-hidden>
           <div className="rec-emoji">{recommendedHand}</div>
           <div className="rec-reason">{recommendationReason}</div>
         </div>
@@ -61,24 +60,23 @@ export default function StylishInput({
                 <div className="hand-label">{h.label}</div>
               </button>
 
-              {/* stats area: count & winrate */}
-              <div className="hand-meta">
+              <div className="hand-meta-row">
                 <div className="meta-left">
                   <div className="meta-count">{s.count} plays</div>
                   <div className="meta-win">W: {((s.winRate || 0) * 100).toFixed(0)}%</div>
                 </div>
+                <div className="meta-space" />
+              </div>
 
-                {/* expected horizontal bar */}
-                <div className="expected-wrap" title={`Expected: ${Math.round((s.expected||0)*100)/100}`}>
-                  <div className="expected-bar-bg">
-                    <div
-                      className="expected-bar-fill"
-                      style={{ width: `${pct}%` }}
-                      aria-hidden
-                    />
-                  </div>
-                  <div className="expected-value">{Math.round((s.expected || 0) * 100) / 100}</div>
+              {/* expected bar is moved into its own full-width row to avoid overlap */}
+              <div className="expected-row" title={`Expected: ${Math.round((s.expected||0)*100)/100}`}>
+                <div className="expected-bar-bg" aria-hidden>
+                  <div
+                    className="expected-bar-fill"
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
+                <div className="expected-value">{Math.round((s.expected || 0) * 100) / 100}</div>
               </div>
             </div>
           );
