@@ -2,18 +2,19 @@
 import React, { useMemo } from "react";
 
 /**
- * SVG line chart + expected horizontal line.
+ * SVG line chart + expected horizontal line (baseline from scoreMap).
  * Props:
  *  - records: filtered array
- *  - scoreMap: mapping
+ *  - scoreMap: mapping { 勝ち:40, あいこ:20, 負け:10 }
  */
 export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }) {
+  // group daily averages
   const daily = useMemo(() => {
     const map = new Map();
     for (const r of records) {
       const d = r.date || new Date(r.createdAt).toISOString().slice(0,10);
       if (!map.has(d)) map.set(d, []);
-      map.get(d).push(scoreMap[r.result] || 0);
+      map.get(d).push(scoreMap[r.result] ?? 0);
     }
     const arr = Array.from(map.entries()).map(([date, scores]) => {
       const avg = scores.reduce((a,b)=>a+b,0)/scores.length;
@@ -23,13 +24,15 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
     return arr;
   }, [records, scoreMap]);
 
-  // global expected (mean across records shown)
-  const expectedAvg = useMemo(() => {
-    if (!records || records.length === 0) return 0;
-    const sum = records.reduce((acc, r) => acc + (scoreMap[r.result] || 0), 0);
-    return Math.round((sum / records.length) * 100) / 100;
-  }, [records, scoreMap]);
+  // baseline expected value from scoreMap (配点から期待される得点)
+  const expectedBaseline = useMemo(() => {
+    const vals = Object.values(scoreMap).filter(v => typeof v === "number");
+    if (vals.length === 0) return 0;
+    const sum = vals.reduce((a,b)=>a+b,0);
+    return Math.round((sum / vals.length) * 100) / 100;
+  }, [scoreMap]);
 
+  // chart layout
   const maxVal = 40;
   const width = Math.max(320, daily.length * 80);
   const height = 160;
@@ -43,24 +46,27 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
 
   const pathD = points.map((p, i) => `${i===0?'M':'L'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
 
+  // hand stats: count wins/draws/losses per hand correctly
   const handStats = useMemo(() => {
     const hands = ["✊","✌️","✋"];
-    const out = { "✊":{count:0,win:0}, "✌️":{count:0,win:0}, "✋":{count:0,win:0} };
+    const out = { "✊":{count:0,win:0,draw:0,loss:0}, "✌️":{count:0,win:0,draw:0,loss:0}, "✋":{count:0,win:0,draw:0,loss:0} };
     for (const r of records) {
       const h = r.hand;
       if (!out[h]) continue;
       out[h].count += 1;
       if (r.result === "勝ち") out[h].win += 1;
+      else if (r.result === "あいこ") out[h].draw += 1;
+      else if (r.result === "負け") out[h].loss += 1;
     }
-    for (const k of hands) {
+    for (const k of Object.keys(out)) {
       const s = out[k];
       s.winRate = s.count ? s.win / s.count : 0;
-      s.avgScore = s.count ? ( (s.win * 40 + (s.count - s.win) * 10) / s.count ) : 0;
+      // correct avg score using wins/draws/losses
+      s.avgScore = s.count ? ((s.win * (scoreMap["勝ち"] ?? 40) + s.draw * (scoreMap["あいこ"] ?? 20) + s.loss * (scoreMap["負け"] ?? 10)) / s.count) : 0;
     }
     return out;
-  }, [records]);
+  }, [records, scoreMap]);
 
-  // helper: convert value to y coord
   const valueToY = (val) => padding.top + (1 - (val / maxVal)) * (height - padding.top - padding.bottom);
 
   return (
@@ -72,6 +78,7 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
 
       <div className="chart-scroll" style={{ overflowX: 'auto' }}>
         <svg width={width} height={height} style={{ display: 'block' }}>
+          {/* grid */}
           {[0,0.25,0.5,0.75,1].map((t, idx) => {
             const y = padding.top + t * (height - padding.top - padding.bottom);
             const val = Math.round((1 - t) * maxVal);
@@ -83,30 +90,31 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
             );
           })}
 
+          {/* x labels */}
           {points.map((p, idx) => (
             <text key={idx} x={p.x} y={height - 6} textAnchor="middle" fontSize="10" fill="#444">{p.date}</text>
           ))}
 
-          {/* expected horizontal red line */}
-          {records.length > 0 && (
+          {/* expected baseline (red dashed horizontal) */}
+          {expectedBaseline > 0 && (
             <g>
               <line
                 x1={padding.left}
                 x2={width - padding.right}
-                y1={valueToY(expectedAvg)}
-                y2={valueToY(expectedAvg)}
+                y1={valueToY(expectedBaseline)}
+                y2={valueToY(expectedBaseline)}
                 stroke="#dc2626"
                 strokeWidth={3}
                 strokeDasharray="6 4"
-                opacity={0.9}
+                opacity={0.95}
               />
-              <text x={width - padding.right - 6} y={valueToY(expectedAvg) - 6} fontSize="11" fill="#dc2626" textAnchor="end">
-                Expected {expectedAvg}
+              <text x={width - padding.right - 6} y={valueToY(expectedBaseline) - 6} fontSize="11" fill="#dc2626" textAnchor="end">
+                Expected {expectedBaseline}
               </text>
             </g>
           )}
 
-          {/* line and points */}
+          {/* main line */}
           {points.length>0 && (
             <>
               <path d={pathD} fill="none" stroke="#2563eb" strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
@@ -130,6 +138,7 @@ export default function Stats({ records = [], scoreMap = {}, sensitivity = 0.5 }
                   <div>
                     <div style={{fontWeight:700}}>{s.count} plays</div>
                     <div style={{fontSize:12, color:"#666"}}>W: {(s.winRate*100).toFixed(0)}%</div>
+                    <div style={{fontSize:12, color:"#666"}}>Wins/Draws/Losses: {s.win}/{s.draw}/{s.loss}</div>
                   </div>
                 </div>
                 <div style={{textAlign:"right"}}>
