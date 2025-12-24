@@ -1,71 +1,142 @@
 /* src/components/StylishInput.css */
+
+/* container */
 .stylish-input {
+  background: transparent;
+  padding: 4px 0 0 0;
+}
+
+/* recommendation row */
+.recommend-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.rec-label {
+  font-weight: 700;
+  font-size: 13px;
+  color: #333;
+}
+.rec-pill {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #eef2ff;
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.04);
+}
+.rec-emoji { font-size: 20px; }
+.rec-reason { font-size: 12px; color: #666; }
+
+/* hands row - responsive grid */
+.hands-row {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+/* each hand wrapper */
+.hand-wrap {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* hand button */
+.hand-btn {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  max-width: 720px;
-}
-
-/* ハンド（グー/チョキ/パー）ボタン */
-.hand-btn {
-  display: inline-flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  background: #fff;
+  gap: 6px;
+  padding: 12px 8px;
   border-radius: 12px;
   border: 1px solid #eef2ff;
+  background: #fff;
   box-shadow: 0 8px 20px rgba(2,6,23,0.04);
-  padding: 18px 28px;
-  min-width: 120px;
-  text-align: center;
   cursor: pointer;
   transition: transform .12s ease, box-shadow .12s ease;
+  text-align: center;
 }
+.hand-btn:active { transform: translateY(1px); }
 
-.hand-btn:hover { transform: translateY(-4px); }
 .hand-btn.active {
-  box-shadow: 0 12px 30px rgba(37,99,235,0.18);
-  border-color: rgba(37,99,235,0.15);
+  box-shadow: 0 10px 30px rgba(37,99,235,0.18);
+  border: 1px solid rgba(37,99,235,0.2);
 }
 
-/* 結果ボタン（勝ち/あいこ/負け） */
+/* emoji and label */
+.hand-emoji { font-size: 28px; line-height: 1; }
+.hand-label { margin-top: 2px; font-size: 14px; font-weight: 700; }
+
+/* badge in bottom-right */
+.hand-badge {
+  position: absolute;
+  right: 4px;
+  bottom: -8px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 6px 8px;
+  font-size: 11px;
+  box-shadow: 0 6px 18px rgba(2,6,23,0.04);
+  border: 1px solid #eee;
+  min-width: 70px;
+  text-align: center;
+}
+.badge-count { font-weight: 700; font-size: 12px; }
+.badge-line { color: #666; font-size: 11px; }
+
+/* results row */
+.results-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
 .result-btn {
-  cursor: pointer;
-  border-radius: 999px;
   padding: 10px 14px;
-  font-weight: 700;
-  font-size: 15px;
+  border-radius: 999px;
   border: 1px solid #eef2ff;
   background: #fff;
-  transition: background .12s ease, color .12s ease, transform .12s ease;
-}
-
-.result-btn:hover { transform: translateY(-3px); }
-.result-btn.active {
-  color: #fff;
-  background: linear-gradient(90deg,#2563eb,#06b6d4);
-  border: none;
-  box-shadow: 0 10px 30px rgba(6,182,212,0.12);
-}
-
-/* 記録ボタン */
-.stylish-input button[type="submit"], .stylish-input .record-btn {
-  padding: 12px 20px;
-  border-radius: 16px;
-  background: linear-gradient(90deg,#06b6d4,#2563eb);
-  color: #fff;
+  cursor: pointer;
   font-weight: 700;
-  box-shadow: 0 8px 30px rgba(6,182,212,0.14);
+}
+.result-btn.active {
+  background: linear-gradient(90deg,#2563eb,#06b6d4);
+  color: #fff;
   border: none;
+}
+
+/* submit */
+.submit-row { margin-top: 6px; }
+.submit-btn {
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: linear-gradient(90deg,#06b6d4,#2563eb);
+  color: white;
+  font-weight: 800;
+  width: 100%;
+  box-shadow: 0 8px 30px rgba(6,182,212,0.14);
   cursor: pointer;
 }
 
-/* 小さな調整 */
-.stylish-input .hands-row { display:flex; gap:12px; }
-.stylish-input .action-row { margin-top: 12px; }
+/* RESPONSIVE TWEAKS for small screens (iPhone) */
+@media (max-width: 420px) {
+  .hand-emoji { font-size: 24px; }
+  .hand-label { font-size: 13px; }
+  .hand-btn { padding: 10px 6px; border-radius: 10px; }
+  .hand-badge { right: 2px; bottom: -6px; padding: 5px 6px; min-width: 56px; font-size: 10px; }
+  .hands-row { gap: 8px; }
+}
 
-@media (max-width: 600px) {
-  .hand-btn { min-width: 84px; padding: 12px 14px; font-size: 14px; }
-  .result-btn { font-size: 14px; padding: 10px 12px; }
+/* smaller phones - shrink even more */
+@media (max-width: 360px) {
+  .hand-emoji { font-size: 22px; }
+  .hand-label { font-size: 12px; }
+  .hand-btn { padding: 8px 6px; }
+  .rec-reason { display: none; } /* save space */
 }

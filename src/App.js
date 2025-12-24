@@ -2,13 +2,17 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { loadRecords, saveRecords } from "./db";
-import { uploadRecord, fetchRemoteRecordsAndMerge, syncUp } from "./sync";
+import {
+  uploadRecord,
+  fetchRemoteRecordsAndMerge,
+  syncUp,
+  deleteRecordOnServer,
+} from "./sync";
 import StylishInput from "./components/StylishInput";
 import Stats from "./components/Stats";
 
 /**
  * 正規化マップ：手の表記をすべて絵文字に揃える
- * 追加で入りうる表記はここに足す（例："グー","ぐー","GU","g" 等）
  */
 const HAND_NORMALIZE = {
   "✊": "✊",
@@ -27,9 +31,6 @@ const HAND_NORMALIZE = {
   "PA": "✋",
 };
 
-/**
- * 結果の正規化：勝ち/あいこ/負け に揃える
- */
 const RESULT_NORMALIZE = {
   "勝ち": "勝ち",
   "負け": "負け",
@@ -54,20 +55,20 @@ function normalizeRecord(raw) {
   if (HAND_NORMALIZE[rawHand]) {
     r.hand = HAND_NORMALIZE[rawHand];
   } else {
-    // try emoji-first: if raw includes emoji, extract the first emoji we know
-    // fallback: search keys
     const found = Object.keys(HAND_NORMALIZE).find((k) => {
       return k && rawHand.indexOf(k) !== -1;
     });
     if (found) r.hand = HAND_NORMALIZE[found];
-    else r.hand = rawHand; // leave as-is (will be ignored by stats if unknown)
+    else r.hand = rawHand;
   }
 
-  // normalize result: trim and lowercase-ish
+  // normalize result
   let rawRes = (r.result || "").toString().trim();
   if (RESULT_NORMALIZE[rawRes]) r.result = RESULT_NORMALIZE[rawRes];
   else {
-    const found = Object.keys(RESULT_NORMALIZE).find((k) => rawRes.toLowerCase().indexOf(k.toLowerCase()) !== -1);
+    const found = Object.keys(RESULT_NORMALIZE).find((k) =>
+      rawRes.toLowerCase().indexOf(k.toLowerCase()) !== -1
+    );
     if (found) r.result = RESULT_NORMALIZE[found];
     else r.result = rawRes;
   }
@@ -77,7 +78,6 @@ function normalizeRecord(raw) {
     if (r.created_at) r.createdAt = new Date(r.created_at).getTime();
     else r.createdAt = Date.now();
   } else {
-    // if createdAt is string try parse
     if (typeof r.createdAt === "string" && !isNaN(Date.parse(r.createdAt))) {
       r.createdAt = new Date(r.createdAt).getTime();
     } else if (typeof r.createdAt !== "number") {
@@ -96,27 +96,23 @@ export default function App() {
   const [history, setHistory] = useState([]);
   const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [tab, setTab] = useState("input"); // "input" | "stats"
+  const [busy, setBusy] = useState(false);
 
   // 初期ロード：local -> merge remote -> normalize -> setRecords -> try syncUp
   useEffect(() => {
     (async () => {
       try {
-        // load local raw
         let localRaw = loadRecords();
         if (!Array.isArray(localRaw)) localRaw = [];
-
-        // ensure we normalize localRaw items
         const localNormalized = localRaw.map(normalizeRecord).filter(Boolean);
 
-        // merge with remote which also will be normalized inside fetchRemoteRecordsAndMerge
         const mergedRaw = await fetchRemoteRecordsAndMerge(localNormalized);
         const merged = Array.isArray(mergedRaw) ? mergedRaw.map(normalizeRecord).filter(Boolean) : [];
 
-        // final dedupe: use date|result|hand|createdAt uniqueness guard (prefer remote createdAt if exists)
+        // dedupe by date|result|hand|createdAt (prefer remote entries order)
         const seen = new Set();
         const final = [];
-        // sort by createdAt ascending to keep older first in final array (we will display newest-first later)
-        merged.sort((a,b)=> (a.createdAt||0)-(b.createdAt||0));
+        merged.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
         for (const r of merged) {
           const k = `${r.date}|${r.result}|${r.hand}|${r.createdAt}`;
           if (!seen.has(k)) {
@@ -140,7 +136,7 @@ export default function App() {
     })();
   }, []);
 
-  // always keep localStorage in sync (persist normalized)
+  // persist normalized records
   useEffect(() => {
     try {
       const normalized = (records || []).map(normalizeRecord).filter(Boolean);
@@ -151,7 +147,7 @@ export default function App() {
     try { saveRecords(records); } catch (e) {}
   }, [records]);
 
-  // Add createdAt and keep history for undo
+  // add record
   function addRecord(result, hand) {
     const newRecord = normalizeRecord({
       date: selectedDate,
@@ -165,7 +161,6 @@ export default function App() {
     setRecords((prev) => {
       const next = [...prev, newRecord];
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
-      // best-effort upload
       uploadRecord(newRecord).then((res) => { if (!res.ok) console.warn("uploadRecord failed", res.error); }).catch(()=>{});
       return next;
     });
@@ -180,7 +175,46 @@ export default function App() {
     try { saveRecords(prev); } catch (e) {}
   }
 
-  // sorted: newest first by createdAt
+  // delete a record locally and attempt remote delete (best-effort)
+  async function deleteRecord(target) {
+    if (!window.confirm("この記録を削除しますか？（元に戻せません）")) return;
+    setBusy(true);
+    try {
+      setHistory((h) => [...h, records.slice()]);
+
+      // remove by createdAt if present, otherwise remove first matching by date/result/hand
+      const newLocal = (() => {
+        if (target.createdAt != null) {
+          return records.filter((r) => r.createdAt !== target.createdAt);
+        } else {
+          let removed = false;
+          return records.filter((r) => {
+            if (removed) return true;
+            if (r.date === target.date && r.result === target.result && r.hand === target.hand) {
+              removed = true;
+              return false;
+            }
+            return true;
+          });
+        }
+      })();
+
+      setRecords(newLocal);
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(newLocal)); } catch (e) {}
+
+      // best-effort server delete
+      try {
+        const res = await deleteRecordOnServer(target);
+        if (!res.ok) console.warn("remote delete failed", res.error);
+      } catch (e) {
+        console.warn("deleteRecordOnServer exception", e);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // sorted newest-first
   const sortedRecords = useMemo(() => {
     return [...records].sort((a, b) => {
       const ta = a.createdAt ?? 0;
@@ -191,7 +225,14 @@ export default function App() {
     });
   }, [records]);
 
-  // ---- Prediction logic: compute stats per hand (works even if some hands are unknown)
+  // compute average
+  const averageScore = useMemo(() => {
+    if (!records || records.length === 0) return 0;
+    const sum = records.reduce((acc, r) => acc + (SCORE_MAP[r.result] || 0), 0);
+    return Math.round((sum / records.length) * 100) / 100;
+  }, [records]);
+
+  // prediction (keeps existing behavior — works with normalized hand/result)
   const prediction = useMemo(() => {
     const hands = ["✊", "✌️", "✋"];
     const statsByHand = {
@@ -214,20 +255,15 @@ export default function App() {
       if (s.count === 0) {
         s.expected = 0;
         s.winRate = 0;
-        s.drawRate = 0;
-        s.loseRate = 0;
       } else {
         s.expected = (s.win * SCORE_MAP["勝ち"] + s.draw * SCORE_MAP["あいこ"] + s.lose * SCORE_MAP["負け"]) / s.count;
         s.winRate = s.win / s.count;
-        s.drawRate = s.draw / s.count;
-        s.loseRate = s.lose / s.count;
       }
     }
 
-    // choose best by expected -> winRate -> count
     let recommendedHand = null;
     let best = { expected: -Infinity, winRate: -Infinity, count: -Infinity };
-    for (const h of hands) {
+    for (const h of ["✊", "✌️", "✋"]) {
       const s = statsByHand[h];
       if (
         s.expected > best.expected ||
@@ -244,12 +280,6 @@ export default function App() {
       : "No data";
 
     return { statsByHand, recommendedHand, reason };
-  }, [records]);
-
-  const averageScore = useMemo(() => {
-    if (!records || records.length === 0) return 0;
-    const sum = records.reduce((acc, r) => acc + (SCORE_MAP[r.result] || 0), 0);
-    return Math.round((sum / records.length) * 100) / 100;
   }, [records]);
 
   return (
@@ -285,7 +315,7 @@ export default function App() {
           />
 
           <div style={{ marginTop: 18 }}>
-            <button onClick={undo} style={{ padding: "8px 12px", borderRadius: 8 }}>↩ 戻る</button>
+            <button onClick={undo} style={{ padding: "8px 12px", borderRadius: 8 }} disabled={busy}>↩ 戻る</button>
           </div>
 
           <div style={{ marginTop: 24 }}>
@@ -296,6 +326,7 @@ export default function App() {
                   <th style={{ textAlign: "left" }}>手</th>
                   <th style={{ textAlign: "left" }}>結果</th>
                   <th style={{ textAlign: "left" }}>得点</th>
+                  <th style={{ textAlign: "left" }}>操作</th>
                 </tr>
               </thead>
               <tbody>
@@ -305,6 +336,9 @@ export default function App() {
                     <td style={{ padding: "8px 0" }}>{r.hand}</td>
                     <td style={{ padding: "8px 0" }}>{r.result}</td>
                     <td style={{ padding: "8px 0" }}>{SCORE_MAP[r.result] ?? 0}</td>
+                    <td style={{ padding: "8px 0" }}>
+                      <button onClick={() => deleteRecord(r)} disabled={busy} style={{ marginRight: 8 }}>削除</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
