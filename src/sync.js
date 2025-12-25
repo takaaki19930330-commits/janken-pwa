@@ -1,100 +1,121 @@
 // src/sync.js
-// Supabase sync helpers.
-// Exports a named function migrateLocalToSupabase() which attempts to push locally-stored records
-// to the Supabase `records` table. Safe if env/config missing.
+// Supabase sync helpers with safe no-op behavior if env vars missing.
+// Exports:
+//   - initSupabase() => returns client or null
+//   - migrateLocalToSupabase() => attempts migrating local records (Promise)
+//   - pushRecordToSupabase(record) => insert one record (Promise)
+//   - subscribeRealtime(onRecord) => subscribe to realtime inserts (returns unsubscribe function)
 
 import { createClient } from "@supabase/supabase-js";
 import { loadRecords, saveRecords } from "./db";
 
-/**
- * Create Supabase client if env vars present.
- * In React apps REACT_APP_* are inlined at build time.
- */
 const SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL || "";
 const SUPABASE_ANON_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY || "";
 
-const supabase = (SUPABASE_URL && SUPABASE_ANON_KEY)
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-  : null;
+let _supabase = null;
+function initSupabase() {
+  if (_supabase) return _supabase;
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn("initSupabase: supabase env not configured");
+    _supabase = null;
+    return null;
+  }
+  try {
+    _supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    return _supabase;
+  } catch (e) {
+    console.warn("initSupabase: createClient failed", e);
+    _supabase = null;
+    return null;
+  }
+}
 
-/**
- * normalizeRecord: convert app-local record shape into DB columns
- * (adjust these keys to your DB schema).
- */
 function normalizeRecord(r) {
   return {
-    // keep device_id if present, otherwise mark as local
     device_id: r.device_id || r.deviceId || "local-device",
-    date: r.date || (r.created_at ? r.created_at.slice(0, 10) : ""),
+    date: r.date || (r.createdAt ? r.createdAt.slice(0,10) : ""),
     result: r.result || r.outcome || "",
     hand: r.hand || "",
-    created_at: r.created_at || new Date().toISOString(),
-    // if you have an id/uuid in local model, include it; Supabase will ignore unknown keys if schema doesn't have them
+    created_at: r.created_at || r.createdAt || new Date().toISOString(),
     ...(r.id ? { id: r.id } : {})
   };
 }
 
-/**
- * migrateLocalToSupabase
- * - reads local records via loadRecords()
- * - if supabase configured, inserts them into `records` table
- * - returns an object { inserted, error, skipped }
- *
- * Important: this function is idempotent only if your DB schema has constraints or you dedupe.
- * We try a naive insert; adjust to upsert if your table has unique key constraints.
- */
 export async function migrateLocalToSupabase() {
   try {
-    const local = await loadRecords(); // always a Promise per db.js
-    if (!local || local.length === 0) {
-      return { inserted: 0, message: "no local records" };
-    }
+    const local = await loadRecords();
+    if (!local || local.length === 0) return { inserted: 0, message: "no local records" };
 
-    if (!supabase) {
-      // No config — keep local and tell caller
-      return { inserted: 0, error: "no supabase config (REACT_APP_SUPABASE_URL / KEY missing)" };
-    }
+    const client = initSupabase();
+    if (!client) return { inserted: 0, error: "no supabase config" };
 
-    // Map to DB shape
     const payload = local.map(normalizeRecord);
+    const { data, error } = await client.from("records").insert(payload);
+    if (error) return { inserted: 0, error };
 
-    // Try inserting in a single call (adjust upsert/duplicate handling as needed)
-    const { data, error } = await supabase.from("records").insert(payload);
-    if (error) {
-      // if insert fails (eg duplicate PK), caller can decide what to do
-      return { inserted: 0, error };
-    }
-
-    // On success: optionally clear local storage / save only server copy
-    // Here we clear local store (you can change this behavior if you want to keep local only)
-    try {
-      await saveRecords([]); // clear local
-    } catch (e) {
-      // non-fatal: report but continue
-      console.warn("migrate: failed to clear local after migrate", e);
-    }
+    try { await saveRecords([]); } catch (e) { console.warn("migrateLocalToSupabase: clear local failed", e); }
 
     return { inserted: Array.isArray(data) ? data.length : 0, data };
   } catch (err) {
-    return { inserted: 0, error: err };
+    return { inserted: 0, error: String(err) };
+  }
+}
+
+export async function pushRecordToSupabase(record) {
+  try {
+    const client = initSupabase();
+    if (!client) return { error: "no supabase client" };
+    const { data, error } = await client.from("records").insert([normalizeRecord(record)]);
+    if (error) return { error };
+    return { data };
+  } catch (e) {
+    return { error: String(e) };
   }
 }
 
 /**
- * Optional small helper to push one record to supabase (used by UI if needed)
+ * subscribeRealtime(onRecord)
+ * - onRecord(record) will be called when a new record arrives via realtime (insert).
+ * - Returns an unsubscribe() function. If realtime not available or not configured, returns noop.
  */
-export async function pushRecordToSupabase(record) {
-  if (!supabase) return { error: "no supabase client" };
+export function subscribeRealtime(onRecord) {
   try {
-    const { data, error } = await supabase.from("records").insert([normalizeRecord(record)]);
-    return { data, error };
+    const client = initSupabase();
+    if (!client || !client.channel) {
+      // older/newer supabase client versions differ - try best-effort
+      console.warn("subscribeRealtime: supabase realtime not available or not configured");
+      return { unsubscribe: () => {} };
+    }
+
+    // safe channel name
+    const ch = client.channel("public:records").on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "records" },
+      (payload) => {
+        try { onRecord && onRecord(payload.new); } catch (e) { console.warn("subscribeRealtime onRecord failed", e); }
+      }
+    );
+
+    // subscribe
+    ch.subscribe((status, err) => {
+      if (err) console.warn("realtime subscribe error", err);
+    });
+
+    return {
+      unsubscribe: () => {
+        try { ch.unsubscribe(); } catch(e) { /* ignore */ }
+      }
+    };
   } catch (e) {
-    return { error: e };
+    console.warn("subscribeRealtime failed", e);
+    return { unsubscribe: () => {} };
   }
 }
 
-// Default export (optional) — keep for compatibility if some code imports default.
+// default export for backward compatibility
 export default {
+  initSupabase,
   migrateLocalToSupabase,
-  pushRecordToSupabase
+  pushRecordToSupabase,
+  subscribeRealtime
 };
