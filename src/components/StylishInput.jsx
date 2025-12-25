@@ -1,80 +1,32 @@
-// src/components/StylishInput.jsx
-import React, { useState, useEffect } from "react";
+import React from "react";
+import "./StylishInput.css";
 
-/**
- * Props:
- * - onAdd(result, hand)
- * - defaultHand
- * - defaultResult
- * - recommendedHand
- * - recommendationReason
- * - predictionStats
- */
-export default function StylishInput({
-  onAdd,
-  defaultHand = "✊",
-  defaultResult = "勝ち",
-  recommendedHand,
-  recommendationReason,
-  predictionStats = {},
-}) {
-  const [hand, setHand] = useState(defaultHand);
-  const [result, setResult] = useState(defaultResult);
+const hands = [
+  { key: "グー", emoji: "✊" },
+  { key: "チョキ", emoji: "✌️" },
+  { key: "パー", emoji: "🖐️" }
+];
 
-  useEffect(() => {
-    setHand(defaultHand);
-  }, [defaultHand]);
-
-  function handleAdd() {
-    if (!hand || !result) return;
-    onAdd(result, hand);
-  }
-
+export default function StylishInput({ selectedHand, onSelectHand, selectedResult, onSelectResult }) {
   return (
     <div className="stylish-input-root">
-      <div className="recommend-row">
-        <div className="rec-label">Recommendation</div>
-        <div className="rec-pill">{recommendedHand ?? "—"} <span className="rec-reason">{recommendationReason}</span></div>
-      </div>
-
-      <div className="hands-row">
-        {["✊","✌️","✋"].map((h) => {
-          const s = predictionStats[h] || {};
-          const isSelected = hand === h;
-          return (
-            <button
-              key={h}
-              className={`hand-card ${isSelected ? 'selected' : ''}`}
-              onClick={() => setHand(h)}
-              aria-pressed={isSelected}
-            >
-              <div className="hand-emoji">{h}</div>
-              <div className="hand-label">
-                {h === "✊" ? "グー" : h === "✌️" ? "チョキ" : "パー"}
-              </div>
-              <div className="hand-meta">
-                <div className="plays">{(s.count||0) + " plays"}</div>
-                <div className="expected">{Math.round((s.expected||0)*100)/100}</div>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="result-row">
-        {["勝ち","あいこ","負け"].map((r) => (
+      <div className="hand-row">
+        {hands.map(h => (
           <button
-            key={r}
-            className={`result-btn ${result === r ? 'active' : ''}`}
-            onClick={() => setResult(r)}
+            key={h.key}
+            className={`hand-btn ${selectedHand === h.key ? "active" : ""}`}
+            onClick={() => onSelectHand(h.key)}
           >
-            {r}
+            <div className="emoji">{h.emoji}</div>
+            <div className="hand-label">{h.key}</div>
           </button>
         ))}
       </div>
 
-      <div style={{ marginTop: 12 }}>
-        <button className="add-btn" onClick={handleAdd}>記録する</button>
+      <div className="result-row">
+        <button className={`result-btn ${selectedResult==="勝ち" ? "sel" : ""}`} onClick={()=>onSelectResult("勝ち")}>勝ち</button>
+        <button className={`result-btn ${selectedResult==="あいこ" ? "sel" : ""}`} onClick={()=>onSelectResult("あいこ")}>あいこ</button>
+        <button className={`result-btn ${selectedResult==="負け" ? "sel" : ""}`} onClick={()=>onSelectResult("負け")}>負け</button>
       </div>
     </div>
   );

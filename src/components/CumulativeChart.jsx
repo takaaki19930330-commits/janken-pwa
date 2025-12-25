@@ -1,96 +1,54 @@
-// src/components/CumulativeChart.jsx
 import React from "react";
+import "./CumulativeChart.css";
 
-export default function CumulativeChart({
-  data,
-  perItemWidth = 96,
-  height = 240,
-  padding = 36,
-  expectedBaseline = (40 + 20 + 10) / 3, // default expectation
-}) {
-  if (!data || data.length === 0) {
-    return <div style={{ padding: 20 }}>データがありません</div>;
-  }
+/*
+  Lightweight, dependency-free chart:
+  - Accepts records prop: [{date, score, created_at}]
+  - Renders a simple SVG line chart (cumulative average until that date)
+  - On hover / tap, shows value above point (value label always visible on mobile)
+*/
 
-  const width = Math.max(600, data.length * perItemWidth);
-  const values = data.map((d) => d.cumulativeAvg);
-  const max = Math.max(...values, expectedBaseline, 50);
-  const min = Math.min(...values, 0);
-
-  const innerW = width - padding * 2;
-  const innerH = height - padding * 2;
-
-  const points = data.map((d, i) => {
-    const x = padding + (i / (data.length - 1 || 1)) * innerW;
-    const y =
-      padding +
-      (1 - (d.cumulativeAvg - min) / (max - min || 1)) * innerH;
-    return {
-      x,
-      y,
-      date: d.date,
-      value: Math.round(d.cumulativeAvg * 100) / 100,
-    };
+export default function CumulativeChart({ records }) {
+  // aggregate by date, compute cumulative average up to each date (ascending)
+  const dates = Array.from(new Set(records.map(r=>r.date))).sort();
+  let cumulative = [];
+  let accSum = 0, accCount = 0;
+  dates.forEach(d => {
+    const items = records.filter(r => r.date === d);
+    items.forEach(it => { accSum += (it.score||0); accCount += 1; });
+    const avg = accCount ? accSum / accCount : 0;
+    cumulative.push({ date: d, avg: Math.round(avg*100)/100 });
   });
 
-  const pathD = points
-    .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
-    .join(" ");
+  // prepare chart geometry
+  const w = 720, h = 180, pad = 24;
+  const values = cumulative.map(c => c.avg);
+  const max = Math.max(30, Math.max(...values, 10));
+  const min = 0;
+  const x = (i) => pad + (i * (w - pad*2) / Math.max(1, cumulative.length-1));
+  const y = (v) => h - pad - ((v - min) / (max - min)) * (h - pad*2);
 
-  // baseline y for expected value
-  const baselineY =
-    padding +
-    (1 - (expectedBaseline - min) / (max - min || 1)) * innerH;
+  const pathD = cumulative.map((p,i)=> `${i===0 ? "M" : "L"} ${x(i)} ${y(p.avg)}`).join(" ");
 
   return (
-    <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch", paddingBottom: 8 }}>
-      <svg viewBox={`0 0 ${width} ${height}`} width={width} height={height} role="img" aria-label="累積平均グラフ">
-        {/* area under line */}
-        <path
-          d={`${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`}
-          fill="#2563eb22"
-        />
-
-        {/* line */}
-        <path
-          d={pathD}
-          fill="none"
-          stroke="#2563eb"
-          strokeWidth="2.5"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-
-        {/* horizontal expected baseline (thick red) */}
-        <line
-          x1={padding}
-          x2={width - padding}
-          y1={baselineY}
-          y2={baselineY}
-          stroke="#dc2626"
-          strokeWidth="4"
-        />
-
+    <div className="cum-chart">
+      <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="xMidYMid meet" className="chart-svg">
+        {/* baseline grid */}
+        {[0, 10, 20, 30].map((g,i)=> (
+          <line key={i} x1={pad} x2={w-pad} y1={y(g)} y2={y(g)} stroke="#edf3f8" strokeWidth="1"/>
+        ))}
+        {/* expected red dashed line (example constant) */}
+        <line x1={pad} x2={w-pad} y1={y(20)} y2={y(20)} stroke="#d9534f" strokeWidth="3" strokeDasharray="6 6" opacity="0.9"/>
+        {/* polyline */}
+        <path d={pathD} fill="none" stroke="#2b6cff" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round"/>
         {/* points and labels */}
-        {points.map((p, idx) => (
-          <g key={idx}>
-            <circle cx={p.x} cy={p.y} r={4} fill="#fff" stroke="#2563eb" strokeWidth="2" />
-            <text x={p.x} y={p.y - 12} fontSize="12" fill="#111" textAnchor="middle">
-              {p.value}
-            </text>
-            <text x={p.x} y={height - padding + 22} fontSize="12" fill="#222" textAnchor="middle">
-              {p.date}
-            </text>
+        {cumulative.map((p,i) => (
+          <g key={i}>
+            <circle cx={x(i)} cy={y(p.avg)} r="6" fill="#fff" stroke="#2b6cff" strokeWidth="3"></circle>
+            <text x={x(i)} y={y(p.avg)-10} textAnchor="middle" fontSize="12" fill="#07132f">{p.avg}</text>
+            <text x={x(i)} y={h - 6} textAnchor="middle" fontSize="10" fill="#8896a5">{p.date}</text>
           </g>
         ))}
-
-        {/* legend */}
-        <g transform={`translate(${padding}, 18)`}>
-          <line x1="0" y1="0" x2="24" y2="0" stroke="#dc2626" strokeWidth="4" />
-          <text x="32" y="4" fontSize="12" fill="#333">
-            期待値（{Math.round(expectedBaseline * 100) / 100}）
-          </text>
-        </g>
       </svg>
     </div>
   );

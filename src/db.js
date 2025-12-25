@@ -1,112 +1,97 @@
-// src/db.js
-// Load/save records with IndexedDB if available, otherwise localStorage.
-// Always export functions that return Promises.
+// simple local DB utility with fallback to localStorage
+const LS_KEY = "janken_records_v1";
 
-const DB_NAME = "janken-db";
-const STORE_NAME = "records_v1";
-const LOCAL_KEY = "janken_records_v1";
+export async function loadAllRecords() {
+  try {
+    // try IndexedDB
+    if (window.indexedDB) {
+      return await _idbGetAll();
+    }
+  } catch (e) {
+    console.warn("idb load failed, falling back to localStorage", e);
+  }
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (!('indexedDB' in window)) {
-      resolve(null);
+export async function saveRecord(record) {
+  try {
+    if (window.indexedDB) {
+      await _idbPut(record);
       return;
     }
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME, { keyPath: "id", autoIncrement: true });
+  } catch (e) {
+    console.warn("idb put failed, falling back", e);
+  }
+  const arr = await loadAllRecords();
+  arr.push(record);
+  localStorage.setItem(LS_KEY, JSON.stringify(arr));
+}
+
+export async function removeRecord(id) {
+  try {
+    if (window.indexedDB) {
+      await _idbRemove(id);
+      return;
+    }
+  } catch (e) {
+    console.warn("idb remove failed, falling back", e);
+  }
+  const arr = (await loadAllRecords()).filter(r => (r.id || r.created_at) !== id);
+  localStorage.setItem(LS_KEY, JSON.stringify(arr));
+}
+
+/* ----- minimal IndexedDB helpers ----- */
+const DB_NAME = "janken-db";
+const STORE = "records";
+
+function _openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = () => {
+      const db = r.result;
+      if (!db.objectStoreNames.contains(STORE)) {
+        db.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => resolve(null); // fall back gracefully
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
   });
 }
 
-export async function loadRecords() {
-  const db = await openDB();
-  if (!db) {
-    // fallback to localStorage
-    try {
-      const raw = localStorage.getItem(LOCAL_KEY);
-      if (!raw) return [];
-      return JSON.parse(raw);
-    } catch (e) {
-      console.warn("db.loadRecords: localStorage parse error", e);
-      return [];
-    }
-  }
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const store = tx.objectStore(STORE_NAME);
-      const req = store.getAll();
-      req.onsuccess = () => {
-        resolve(req.result || []);
-        db.close();
-      };
-      req.onerror = () => {
-        resolve([]);
-        db.close();
-      };
-    } catch (e) {
-      console.warn("db.loadRecords indexeddb read error", e);
-      resolve([]);
-    }
+async function _idbGetAll() {
+  const db = await _openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, "readonly");
+    const store = tx.objectStore(STORE);
+    const req = store.getAll();
+    req.onsuccess = () => res(req.result);
+    req.onerror = () => rej(req.error);
   });
 }
 
-export async function saveRecords(records) {
-  const db = await openDB();
-  if (!db) {
-    try {
-      localStorage.setItem(LOCAL_KEY, JSON.stringify(records || []));
-    } catch (e) {
-      console.warn("db.saveRecords localStorage error", e);
-    }
-    return;
-  }
-  return new Promise((resolve) => {
-    try {
-      const tx = db.transaction(STORE_NAME, "readwrite");
-      const store = tx.objectStore(STORE_NAME);
-      // Clear and re-add for simplicity
-      const clearReq = store.clear();
-      clearReq.onsuccess = () => {
-        let i = 0;
-        if (!records || records.length === 0) {
-          resolve();
-          db.close();
-          return;
-        }
-        for (const r of records) {
-          const addReq = store.add(r);
-          addReq.onsuccess = () => {
-            i++;
-            if (i === records.length) {
-              resolve();
-              db.close();
-            }
-          };
-          addReq.onerror = () => {
-            i++;
-            if (i === records.length) {
-              resolve();
-              db.close();
-            }
-          };
-        }
-      };
-      clearReq.onerror = () => {
-        // fallback to localStorage on error
-        try { localStorage.setItem(LOCAL_KEY, JSON.stringify(records || [])); } catch(e){};
-        resolve();
-        db.close();
-      };
-    } catch (e) {
-      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(records || [])); } catch(e){};
-      resolve();
-    }
+async function _idbPut(rec) {
+  const db = await _openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const r = store.add(rec);
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  });
+}
+
+async function _idbRemove(id) {
+  const db = await _openDB();
+  return new Promise((res, rej) => {
+    const tx = db.transaction(STORE, "readwrite");
+    const store = tx.objectStore(STORE);
+    const r = store.delete(id);
+    r.onsuccess = () => res();
+    r.onerror = () => rej(r.error);
   });
 }

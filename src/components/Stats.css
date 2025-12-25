@@ -1,0 +1,10 @@
+.stats-root { display:flex; gap:12px; flex-wrap:wrap; }
+.hand-summary, .recommended { background:#fff; padding:12px; border-radius:12px; box-shadow:0 8px 20px rgba(12,40,80,0.04); flex:1; min-width:220px; }
+.hand-card { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px dashed #f0f4f6; }
+.hand-card:last-child { border-bottom:none; }
+.left { display:flex; gap:12px; align-items:center; }
+.emoji { font-size:22px; }
+.plays { font-weight:700; }
+.avgscore { text-align:right; }
+.avgscore .value { font-weight:800; font-size:20px; }
+.recommended-pill { padding:10px 14px; border-radius:18px; background:linear-gradient(90deg,#34a7f6,#5b6cff); color:white; display:inline-block; font-weight:700; }
