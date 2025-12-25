@@ -55,7 +55,8 @@ function App() {
   }
 
   async function onDelete(id) {
-    if (!confirm("削除していいですか？")) return;
+    // replace global confirm with window.confirm to satisfy ESLint rules
+    if (!window.confirm("削除していいですか？")) return;
     await removeRecord(id);
     await refresh();
   }
